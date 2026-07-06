@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
-import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package } from 'lucide-react'
+import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package, Pencil } from 'lucide-react'
 
 const urgenciaConfig: Record<string, { label: string; color: string }> = {
   baixa:   { label: 'Baixa',   color: 'bg-lead-100 text-lead-600' },
@@ -95,6 +95,9 @@ export default async function ComprasPage() {
                           {new Date(s.data_necessidade).toLocaleDateString('pt-BR')}
                         </span>
                       )}
+                      <Link href={`/dashboard/compras/${s.id}/editar`} className="p-1.5 text-lead-400 hover:text-brand-600 transition-colors rounded">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
                   </div>
                 )

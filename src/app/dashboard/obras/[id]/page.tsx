@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, MapPin, Calendar, DollarSign, FileText, BookOpen, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, DollarSign, FileText, BookOpen, ShoppingCart, Pencil } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   planejamento:  { label: 'Planejamento',  color: 'bg-blue-100 text-blue-700' },
@@ -34,7 +34,13 @@ export default async function ObraDetailPage({ params }: { params: { id: string 
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Link>
-          <span className={`badge ${cfg.color}`}>{cfg.label}</span>
+          <div className="flex items-center gap-3">
+            <span className={`badge ${cfg.color}`}>{cfg.label}</span>
+            <Link href={`/dashboard/obras/${obra.id}/editar`} className="btn-secondary py-1.5 px-3 text-sm">
+              <Pencil className="w-3.5 h-3.5" />
+              Editar
+            </Link>
+          </div>
         </div>
 
         {/* Progresso */}

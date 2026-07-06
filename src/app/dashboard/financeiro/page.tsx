@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
-import { DollarSign, Plus, TrendingUp, TrendingDown, Clock, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { DollarSign, Plus, TrendingUp, TrendingDown, Clock, CheckCircle2, AlertTriangle, Pencil } from 'lucide-react'
 
 const tipoConfig: Record<string, { label: string; color: string; sinal: string }> = {
   medicao:     { label: 'Medição',      color: 'bg-blue-50 text-blue-700',   sinal: '+' },
@@ -83,10 +83,10 @@ export default async function FinanceiroPage() {
         <div className="card">
           <div className="flex items-center justify-between px-6 py-4 border-b border-lead-100">
             <h2 className="font-semibold text-lead-900">Lançamentos</h2>
-            <button className="btn-primary">
+            <Link href="/dashboard/financeiro/novo" className="btn-primary">
               <Plus className="w-4 h-4" />
               Novo Lançamento
-            </button>
+            </Link>
           </div>
 
           {lista.length === 0 ? (
@@ -117,6 +117,9 @@ export default async function FinanceiroPage() {
                         {formatCurrency(l.valor)}
                       </p>
                       <StatusIcon className={`w-4 h-4 ${stsCfg.color}`} />
+                      <Link href={`/dashboard/financeiro/${l.id}/editar`} className="p-1.5 text-lead-400 hover:text-brand-600 transition-colors rounded">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
                   </div>
                 )
