@@ -73,7 +73,7 @@ export default async function ComprasPage() {
                 const stsCfg = statusConfig[s.status] || statusConfig.aberta
                 const StatusIcon = stsCfg.icon
                 return (
-                  <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
+                  <Link key={s.id} href={`/dashboard/compras/${s.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
                     <div className="w-9 h-9 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0">
                       <ShoppingCart className="w-4 h-4 text-brand-600" />
                     </div>
@@ -95,11 +95,9 @@ export default async function ComprasPage() {
                           {new Date(s.data_necessidade).toLocaleDateString('pt-BR')}
                         </span>
                       )}
-                      <Link href={`/dashboard/compras/${s.id}/editar`} className="p-1.5 text-lead-400 hover:text-brand-600 transition-colors rounded">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Link>
+                      <Pencil className="w-3.5 h-3.5 text-lead-300" />
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>
