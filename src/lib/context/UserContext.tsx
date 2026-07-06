@@ -2,17 +2,10 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { Papel, UserProfile } from '@/lib/types/roles'
 
-export type Papel = 'admin' | 'cliente' | 'arquiteto'
-
-export interface UserProfile {
-  id: string
-  nome: string
-  email: string
-  papel: Papel
-  empresa?: string
-  telefone?: string
-}
+export type { Papel, UserProfile }
+export { PAPEL_LABELS, PAPEL_CORES } from '@/lib/types/roles'
 
 const UserContext = createContext<UserProfile | null>(null)
 
@@ -56,15 +49,3 @@ export function useUserProfile() {
 export function isAdmin(profile: UserProfile | null) { return profile?.papel === 'admin' }
 export function isCliente(profile: UserProfile | null) { return profile?.papel === 'cliente' }
 export function isArquiteto(profile: UserProfile | null) { return profile?.papel === 'arquiteto' }
-
-export const PAPEL_LABELS: Record<Papel, string> = {
-  admin: 'Construtora (Admin)',
-  cliente: 'Cliente',
-  arquiteto: 'Arquiteto',
-}
-
-export const PAPEL_CORES: Record<Papel, string> = {
-  admin: 'bg-brand-100 text-brand-700',
-  cliente: 'bg-blue-50 text-blue-700',
-  arquiteto: 'bg-purple-50 text-purple-700',
-}

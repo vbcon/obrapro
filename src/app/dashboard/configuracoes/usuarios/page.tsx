@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
 import { Users, Plus, Pencil, Building2 } from 'lucide-react'
-import { PAPEL_LABELS, PAPEL_CORES, type Papel } from '@/lib/context/UserContext'
+import { PAPEL_LABELS, PAPEL_CORES, type Papel } from '@/lib/types/roles'
 
 export default async function UsuariosPage() {
   const supabase = await createClient()

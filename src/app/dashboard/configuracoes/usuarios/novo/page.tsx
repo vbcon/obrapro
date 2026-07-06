@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 import { ArrowLeft, Save, AlertCircle, Eye, EyeOff } from 'lucide-react'
-import { PAPEL_LABELS, type Papel } from '@/lib/context/UserContext'
+import { PAPEL_LABELS, type Papel } from '@/lib/types/roles'
 
 export default function NovoUsuarioPage() {
   const router = useRouter()

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Papel } from '@/lib/context/UserContext'
+import type { Papel } from '@/lib/types/roles'
 import {
   Building2, HardHat, CalendarDays, ShoppingCart,
   MessageCircle, LogOut, ChevronRight, LayoutDashboard,
