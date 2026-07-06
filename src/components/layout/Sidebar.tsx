@@ -3,36 +3,42 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { Papel } from '@/lib/context/UserContext'
 import {
-  Building2,
-  HardHat,
-  CalendarDays,
-  ShoppingCart,
-  MessageCircle,
-  LogOut,
-  ChevronRight,
-  LayoutDashboard,
-  Settings,
-  BookOpen,
-  DollarSign,
+  Building2, HardHat, CalendarDays, ShoppingCart,
+  MessageCircle, LogOut, ChevronRight, LayoutDashboard,
+  Settings, BookOpen, DollarSign, Users,
 } from 'lucide-react'
 
-const navItems = [
-  { label: 'Dashboard',     href: '/dashboard',             icon: LayoutDashboard, exact: true },
-  { label: 'Obras',         href: '/dashboard/obras',       icon: HardHat },
-  { label: 'Compras',       href: '/dashboard/compras',     icon: ShoppingCart },
-  { label: 'Financeiro',    href: '/dashboard/financeiro',  icon: DollarSign },
-  { label: 'Cronograma',    href: '/dashboard/cronograma',  icon: CalendarDays },
-  { label: 'Diário de Obra',href: '/dashboard/diario',      icon: BookOpen },
-  { label: 'WhatsApp',      href: '/dashboard/whatsapp',    icon: MessageCircle },
+// Definição de quais módulos cada papel pode ver
+const NAV_TODOS = [
+  { label: 'Dashboard',      href: '/dashboard',            icon: LayoutDashboard, exact: true, papeis: ['admin','cliente','arquiteto'] },
+  { label: 'Obras',          href: '/dashboard/obras',      icon: HardHat,         papeis: ['admin','cliente'] },
+  { label: 'Compras',        href: '/dashboard/compras',    icon: ShoppingCart,    papeis: ['admin','cliente'] },
+  { label: 'Financeiro',     href: '/dashboard/financeiro', icon: DollarSign,      papeis: ['admin','cliente'] },
+  { label: 'Cronograma',     href: '/dashboard/cronograma', icon: CalendarDays,    papeis: ['admin','cliente','arquiteto'] },
+  { label: 'Diário de Obra', href: '/dashboard/diario',     icon: BookOpen,        papeis: ['admin','cliente','arquiteto'] },
+  { label: 'WhatsApp',       href: '/dashboard/whatsapp',   icon: MessageCircle,   papeis: ['admin'] },
 ]
+
+const NAV_SISTEMA = [
+  { label: 'Usuários',       href: '/dashboard/configuracoes/usuarios', icon: Users,    papeis: ['admin'] },
+  { label: 'Configurações',  href: '/dashboard/configuracoes',          icon: Settings, papeis: ['admin','cliente','arquiteto'], exact: true },
+]
+
+const PAPEL_BADGE: Record<Papel, { label: string; cor: string }> = {
+  admin:     { label: 'Admin',     cor: 'bg-brand-500/20 text-brand-400' },
+  cliente:   { label: 'Cliente',   cor: 'bg-blue-500/20 text-blue-400' },
+  arquiteto: { label: 'Arquiteto', cor: 'bg-purple-500/20 text-purple-400' },
+}
 
 interface SidebarProps {
   nomeUsuario?: string
   emailUsuario?: string
+  papel: Papel
 }
 
-export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
+export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -47,6 +53,10 @@ export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
     router.push('/login')
     router.refresh()
   }
+
+  const navVisiveis = NAV_TODOS.filter(item => item.papeis.includes(papel))
+  const sistemaPapeis = NAV_SISTEMA.filter(item => item.papeis.includes(papel))
+  const badge = PAPEL_BADGE[papel] || PAPEL_BADGE.admin
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-lead-900 border-r border-lead-800">
@@ -65,12 +75,12 @@ export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
       </div>
 
       {/* Navegação */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2 mt-1">
           Menu Principal
         </p>
 
-        {navItems.map(item => {
+        {navVisiveis.map(item => {
           const active = isActive(item.href, item.exact)
           const Icon = item.icon
           return (
@@ -90,16 +100,30 @@ export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
           )
         })}
 
-        <div className="pt-4">
-          <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2">Sistema</p>
-          <Link
-            href="/dashboard/configuracoes"
-            className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-lead-400 hover:bg-lead-800 hover:text-lead-100 transition-all duration-150"
-          >
-            <Settings className="w-4 h-4 shrink-0 text-lead-500 group-hover:text-lead-300" />
-            <span>Configurações</span>
-          </Link>
-        </div>
+        {sistemaPapeis.length > 0 && (
+          <div className="pt-4">
+            <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2">Sistema</p>
+            {sistemaPapeis.map(item => {
+              const active = isActive(item.href, item.exact)
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                    active
+                      ? 'bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/20'
+                      : 'text-lead-400 hover:bg-lead-800 hover:text-lead-100'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-brand-400' : 'text-lead-500 group-hover:text-lead-300'}`} />
+                  <span className="flex-1">{item.label}</span>
+                  {active && <ChevronRight className="w-3.5 h-3.5 text-brand-400/60" />}
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </nav>
 
       {/* Perfil */}
@@ -109,7 +133,10 @@ export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
             {nomeUsuario?.charAt(0).toUpperCase() || '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-lead-200 truncate">{nomeUsuario || 'Usuário'}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-lead-200 truncate">{nomeUsuario || 'Usuário'}</p>
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badge.cor} shrink-0`}>{badge.label}</span>
+            </div>
             <p className="text-xs text-lead-500 truncate">{emailUsuario || ''}</p>
           </div>
           <button
