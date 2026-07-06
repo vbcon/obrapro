@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, MapPin, Calendar, DollarSign, FileText, BookOpen, ShoppingCart, Pencil } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, DollarSign, FileText, Camera, ShoppingCart, Pencil } from 'lucide-react'
+import ProjetosSection from '@/components/obras/ProjetosSection'
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   planejamento:  { label: 'Planejamento',  color: 'bg-blue-100 text-blue-700' },
@@ -18,7 +19,10 @@ function formatCurrency(v: number) {
 
 export default async function ObraDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
-  const { data: obra } = await supabase.from('obras').select('*').eq('id', params.id).single()
+  const [{ data: obra }, { data: arquivos }] = await Promise.all([
+    supabase.from('obras').select('*').eq('id', params.id).single(),
+    supabase.from('obra_arquivos').select('*').eq('obra_id', params.id).order('criado_em', { ascending: false }),
+  ])
 
   if (!obra) notFound()
 
@@ -139,13 +143,16 @@ export default async function ObraDetailPage({ params }: { params: { id: string 
           </div>
         </div>
 
+        {/* Projetos e Arquivos */}
+        <ProjetosSection obraId={obra.id} arquivosIniciais={arquivos || []} />
+
         {/* Ações rápidas */}
         <div className="card p-5">
           <h3 className="font-semibold text-lead-900 mb-4">Ações</h3>
           <div className="flex flex-wrap gap-3">
             <Link href={`/dashboard/diario/nova?obra=${obra.id}`} className="btn-secondary">
-              <BookOpen className="w-4 h-4" />
-              Novo Diário
+              <Camera className="w-4 h-4" />
+              Novo Status
             </Link>
             <Link href={`/dashboard/compras/nova?obra=${obra.id}`} className="btn-secondary">
               <ShoppingCart className="w-4 h-4" />

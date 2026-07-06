@@ -17,7 +17,7 @@ const NAV_TODOS = [
   { label: 'Compras',        href: '/dashboard/compras',    icon: ShoppingCart,    papeis: ['admin','cliente'] },
   { label: 'Financeiro',     href: '/dashboard/financeiro', icon: DollarSign,      papeis: ['admin','cliente'] },
   { label: 'Cronograma',     href: '/dashboard/cronograma', icon: CalendarDays,    papeis: ['admin','cliente','arquiteto'] },
-  { label: 'Diário de Obra', href: '/dashboard/diario',     icon: BookOpen,        papeis: ['admin','cliente','arquiteto'] },
+  { label: 'Status da Obra', href: '/dashboard/diario',     icon: BookOpen,        papeis: ['admin','cliente','arquiteto'] },
   { label: 'WhatsApp',       href: '/dashboard/whatsapp',   icon: MessageCircle,   papeis: ['admin'] },
 ]
 

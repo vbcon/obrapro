@@ -51,7 +51,8 @@ export default function OcDetailPage() {
 
   const obra = oc.obras
   const sol = oc.solicitacoes_compra
-  const itens = cotacao?.itens || sol?.itens || []
+  const itens = cotacao?.itens || oc.itens || sol?.itens || []
+  const condicaoPagamento = oc.condicao_pagamento || cotacao?.condicao_pagamento
 
   return (
     <>
@@ -90,8 +91,8 @@ export default function OcDetailPage() {
             <div className="text-right">
               <p className="text-xs text-lead-500 mb-1">Valor total</p>
               <p className="text-3xl font-black text-brand-600">{fmt(oc.valor_total || 0)}</p>
-              {cotacao?.condicao_pagamento && (
-                <p className="text-xs text-lead-500 mt-1">💳 {cotacao.condicao_pagamento}</p>
+              {condicaoPagamento && (
+                <p className="text-xs text-lead-500 mt-1">💳 {condicaoPagamento}</p>
               )}
             </div>
           </div>

@@ -23,7 +23,7 @@ export default async function ComprasPage() {
 
   const [{ data: solicitacoes }, { data: ordens }] = await Promise.all([
     supabase.from('solicitacoes_compra').select('*, obras(nome, codigo)').order('criado_em', { ascending: false }),
-    supabase.from('compras').select('*, obras(nome), fornecedores(nome_fantasia, razao_social)').order('criado_em', { ascending: false }),
+    supabase.from('compras').select('*, obras(nome), fornecedores(nome_fantasia, razao_social), tipo, fornecedor_nome').order('criado_em', { ascending: false }),
   ])
 
   const listaSolic = solicitacoes || []
@@ -105,29 +105,42 @@ export default async function ComprasPage() {
         </div>
 
         {/* Ordens de compra */}
-        {listaOrdens.length > 0 && (
-          <div className="card">
-            <div className="px-6 py-4 border-b border-lead-100">
-              <h2 className="font-semibold text-lead-900">Ordens de Compra</h2>
+        <div className="card">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-lead-100">
+            <h2 className="font-semibold text-lead-900">Ordens de Compra</h2>
+            <Link href="/dashboard/compras/oc/nova" className="btn-primary">
+              <Plus className="w-4 h-4" />
+              Nova O.C. Direta
+            </Link>
+          </div>
+          {listaOrdens.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="w-8 h-8 text-lead-300 mb-2" />
+              <p className="text-sm font-medium text-lead-600">Nenhuma ordem de compra</p>
+              <p className="text-xs text-lead-400 mt-1">Gere uma O.C. via cotação aprovada ou diretamente aqui</p>
             </div>
+          ) : (
             <div className="divide-y divide-lead-100">
               {listaOrdens.map((oc: any) => (
-                <div key={oc.id} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
+                <Link key={oc.id} href={`/dashboard/compras/oc/${oc.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
                   <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
                     <Package className="w-4 h-4 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-lead-900 font-mono text-sm">{oc.numero_pedido || oc.id.slice(0, 8).toUpperCase()}</p>
-                    <p className="text-xs text-lead-500">{oc.obras?.nome} · {oc.fornecedores?.nome_fantasia || oc.fornecedores?.razao_social || 'Fornecedor não informado'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-lead-900 font-mono text-sm">{oc.numero_pedido || oc.id.slice(0, 8).toUpperCase()}</p>
+                      {oc.tipo === 'direta' && <span className="badge bg-purple-50 text-purple-700 text-[10px]">Direta</span>}
+                    </div>
+                    <p className="text-xs text-lead-500">{oc.obras?.nome} · {oc.fornecedor_nome || oc.fornecedores?.nome_fantasia || oc.fornecedores?.razao_social || '—'}</p>
                   </div>
                   <div className="text-sm font-semibold text-lead-900">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(oc.valor_total)}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </>
   )
