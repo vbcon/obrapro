@@ -13,35 +13,18 @@ import {
   ChevronRight,
   LayoutDashboard,
   Settings,
+  BookOpen,
+  DollarSign,
 } from 'lucide-react'
 
 const navItems = [
-  {
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    exact: true,
-  },
-  {
-    label: 'Obras',
-    href: '/dashboard/obras',
-    icon: HardHat,
-  },
-  {
-    label: 'Cronograma',
-    href: '/dashboard/cronograma',
-    icon: CalendarDays,
-  },
-  {
-    label: 'Compras',
-    href: '/dashboard/compras',
-    icon: ShoppingCart,
-  },
-  {
-    label: 'WhatsApp',
-    href: '/dashboard/whatsapp',
-    icon: MessageCircle,
-  },
+  { label: 'Dashboard',     href: '/dashboard',             icon: LayoutDashboard, exact: true },
+  { label: 'Obras',         href: '/dashboard/obras',       icon: HardHat },
+  { label: 'Compras',       href: '/dashboard/compras',     icon: ShoppingCart },
+  { label: 'Financeiro',    href: '/dashboard/financeiro',  icon: DollarSign },
+  { label: 'Cronograma',    href: '/dashboard/cronograma',  icon: CalendarDays },
+  { label: 'Diário de Obra',href: '/dashboard/diario',      icon: BookOpen },
+  { label: 'WhatsApp',      href: '/dashboard/whatsapp',    icon: MessageCircle },
 ]
 
 interface SidebarProps {
@@ -90,20 +73,17 @@ export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
         {navItems.map(item => {
           const active = isActive(item.href, item.exact)
           const Icon = item.icon
-
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`
-                group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150
-                ${active
+              className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                active
                   ? 'bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/20'
                   : 'text-lead-400 hover:bg-lead-800 hover:text-lead-100'
-                }
-              `}
+              }`}
             >
-              <Icon className={`w-4.5 h-4.5 shrink-0 ${active ? 'text-brand-400' : 'text-lead-500 group-hover:text-lead-300'}`} />
+              <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-brand-400' : 'text-lead-500 group-hover:text-lead-300'}`} />
               <span className="flex-1">{item.label}</span>
               {active && <ChevronRight className="w-3.5 h-3.5 text-brand-400/60" />}
             </Link>
@@ -111,20 +91,18 @@ export default function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
         })}
 
         <div className="pt-4">
-          <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2">
-            Sistema
-          </p>
+          <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2">Sistema</p>
           <Link
             href="/dashboard/configuracoes"
             className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-lead-400 hover:bg-lead-800 hover:text-lead-100 transition-all duration-150"
           >
-            <Settings className="w-4.5 h-4.5 shrink-0 text-lead-500 group-hover:text-lead-300" />
+            <Settings className="w-4 h-4 shrink-0 text-lead-500 group-hover:text-lead-300" />
             <span>Configurações</span>
           </Link>
         </div>
       </nav>
 
-      {/* Perfil do usuário */}
+      {/* Perfil */}
       <div className="border-t border-lead-800 p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 font-semibold text-sm shrink-0">

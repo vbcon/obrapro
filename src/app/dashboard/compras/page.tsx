@@ -1,132 +1,129 @@
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
-import { ShoppingCart, Plus, Search, Package, CheckCircle2, Clock, Truck, XCircle, FileEdit } from 'lucide-react'
-import type { Compra } from '@/lib/types/database'
+import Link from 'next/link'
+import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package } from 'lucide-react'
 
-const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  rascunho: { label: 'Rascunho',  color: 'bg-lead-100 text-lead-600',     icon: FileEdit },
-  enviado:  { label: 'Enviado',   color: 'bg-blue-50 text-blue-700',      icon: Clock },
-  aprovado: { label: 'Aprovado',  color: 'bg-brand-50 text-brand-700',    icon: CheckCircle2 },
-  recebido: { label: 'Recebido',  color: 'bg-green-50 text-green-700',    icon: Truck },
-  cancelado:{ label: 'Cancelado', color: 'bg-red-50 text-red-700',        icon: XCircle },
+const urgenciaConfig: Record<string, { label: string; color: string }> = {
+  baixa:   { label: 'Baixa',   color: 'bg-lead-100 text-lead-600' },
+  media:   { label: 'Média',   color: 'bg-blue-50 text-blue-700' },
+  alta:    { label: 'Alta',    color: 'bg-yellow-50 text-yellow-700' },
+  urgente: { label: 'Urgente', color: 'bg-red-50 text-red-700' },
 }
 
-function formatCurrency(valor: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)
+const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  aberta:      { label: 'Aberta',      color: 'bg-blue-50 text-blue-700',   icon: Clock },
+  em_cotacao:  { label: 'Em cotação',  color: 'bg-yellow-50 text-yellow-700', icon: Package },
+  aprovada:    { label: 'Aprovada',    color: 'bg-brand-50 text-brand-700', icon: CheckCircle2 },
+  convertida:  { label: 'OC gerada',   color: 'bg-green-50 text-green-700', icon: CheckCircle2 },
+  cancelada:   { label: 'Cancelada',   color: 'bg-red-50 text-red-700',     icon: XCircle },
 }
 
 export default async function ComprasPage() {
   const supabase = await createClient()
-  const { data: compras } = await supabase
-    .from('compras')
-    .select('*, obras(nome), fornecedores(razao_social, nome_fantasia)')
-    .order('criado_em', { ascending: false })
 
-  const lista: Compra[] = compras || []
+  const [{ data: solicitacoes }, { data: ordens }] = await Promise.all([
+    supabase.from('solicitacoes_compra').select('*, obras(nome, codigo)').order('criado_em', { ascending: false }),
+    supabase.from('compras').select('*, obras(nome), fornecedores(nome_fantasia, razao_social)').order('criado_em', { ascending: false }),
+  ])
 
-  const totalPendente = lista.filter(c => ['enviado', 'aprovado'].includes(c.status)).reduce((acc, c) => acc + c.valor_total, 0)
-  const totalRecebido = lista.filter(c => c.status === 'recebido').reduce((acc, c) => acc + c.valor_total, 0)
+  const listaSolic = solicitacoes || []
+  const listaOrdens = ordens || []
 
   return (
     <>
-      <Header titulo="Compras" subtitulo={`${lista.length} pedido${lista.length !== 1 ? 's' : ''} de compra`} />
+      <Header titulo="Compras" subtitulo="Solicitações e ordens de compra" />
 
-      <div className="p-6 space-y-5">
+      <div className="p-6 space-y-6">
 
-        {/* Resumo financeiro */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="card p-5">
-            <p className="text-sm text-lead-500">Total de pedidos</p>
-            <p className="text-2xl font-bold text-lead-900 mt-1">{lista.length}</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-lead-500">Em aberto / aprovado</p>
-            <p className="text-2xl font-bold text-brand-600 mt-1">{formatCurrency(totalPendente)}</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-lead-500">Total recebido</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(totalRecebido)}</p>
-          </div>
-        </div>
-
-        {/* Ações */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-between">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-lead-400" />
-            <input type="search" placeholder="Buscar pedido..." className="input pl-10 w-full" />
-          </div>
-          <button className="btn-primary shrink-0">
-            <Plus className="w-4 h-4" />
-            Novo pedido
-          </button>
-        </div>
-
-        {/* Tabela */}
-        {lista.length === 0 ? (
-          <div className="card flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4">
-              <ShoppingCart className="w-8 h-8 text-brand-500" />
+        {/* Resumo */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Solicitações abertas', valor: listaSolic.filter((s: any) => s.status === 'aberta').length, cor: 'text-blue-600' },
+            { label: 'Em cotação', valor: listaSolic.filter((s: any) => s.status === 'em_cotacao').length, cor: 'text-yellow-600' },
+            { label: 'Aguardando aprovação', valor: listaSolic.filter((s: any) => s.status === 'aprovada').length, cor: 'text-brand-600' },
+            { label: 'Ordens de compra', valor: listaOrdens.length, cor: 'text-green-600' },
+          ].map(item => (
+            <div key={item.label} className="card p-4 text-center">
+              <p className={`text-2xl font-bold ${item.cor}`}>{item.valor}</p>
+              <p className="text-xs text-lead-500 mt-1">{item.label}</p>
             </div>
-            <h3 className="text-lg font-semibold text-lead-900">Nenhum pedido de compra</h3>
-            <p className="text-lead-500 text-sm mt-1 max-w-xs">
-              Registre pedidos de materiais e serviços para cada obra.
-            </p>
-            <button className="btn-primary mt-6">
+          ))}
+        </div>
+
+        {/* Solicitações */}
+        <div className="card">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-lead-100">
+            <h2 className="font-semibold text-lead-900">Solicitações de Material</h2>
+            <Link href="/dashboard/compras/nova" className="btn-primary">
               <Plus className="w-4 h-4" />
-              Criar primeiro pedido
-            </button>
+              Nova Solicitação
+            </Link>
           </div>
-        ) : (
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-lead-50 border-b border-lead-200">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-lead-500 uppercase tracking-wide">Pedido</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-lead-500 uppercase tracking-wide">Obra</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-lead-500 uppercase tracking-wide hidden md:table-cell">Fornecedor</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-lead-500 uppercase tracking-wide hidden lg:table-cell">Data</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-lead-500 uppercase tracking-wide">Valor</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-lead-500 uppercase tracking-wide">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-lead-100">
-                  {lista.map((compra: Compra & { obras?: { nome: string }; fornecedores?: { razao_social: string; nome_fantasia?: string } }) => {
-                    const cfg = statusConfig[compra.status] || statusConfig.rascunho
-                    const StatusIcon = cfg.icon
-                    return (
-                      <tr key={compra.id} className="hover:bg-lead-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-md bg-brand-500/10 flex items-center justify-center shrink-0">
-                              <Package className="w-3.5 h-3.5 text-brand-600" />
-                            </div>
-                            <span className="font-medium text-lead-900 font-mono text-xs">
-                              {compra.numero_pedido || compra.id.slice(0, 8).toUpperCase()}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-lead-700">{compra.obras?.nome || '—'}</td>
-                        <td className="px-4 py-3 text-lead-500 hidden md:table-cell">
-                          {compra.fornecedores?.nome_fantasia || compra.fornecedores?.razao_social || '—'}
-                        </td>
-                        <td className="px-4 py-3 text-lead-500 hidden lg:table-cell">
-                          {new Date(compra.data_pedido).toLocaleDateString('pt-BR')}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-lead-900">
-                          {formatCurrency(compra.valor_total)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`badge ${cfg.color} inline-flex items-center gap-1`}>
-                            <StatusIcon className="w-3 h-3" />
-                            <span className="hidden sm:inline">{cfg.label}</span>
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+
+          {listaSolic.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <ShoppingCart className="w-10 h-10 text-lead-300 mb-3" />
+              <p className="font-medium text-lead-600">Nenhuma solicitação</p>
+              <p className="text-sm text-lead-400 mt-1">Clique em "Nova Solicitação" para começar</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-lead-100">
+              {listaSolic.map((s: any) => {
+                const urgCfg = urgenciaConfig[s.urgencia] || urgenciaConfig.media
+                const stsCfg = statusConfig[s.status] || statusConfig.aberta
+                const StatusIcon = stsCfg.icon
+                return (
+                  <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0">
+                      <ShoppingCart className="w-4 h-4 text-brand-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-lead-900 truncate">{s.titulo}</p>
+                      <p className="text-xs text-lead-500 mt-0.5">{s.obras?.codigo} — {s.obras?.nome}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`badge ${urgCfg.color} hidden sm:inline-flex`}>
+                        {s.urgencia === 'urgente' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                        {urgCfg.label}
+                      </span>
+                      <span className={`badge ${stsCfg.color} inline-flex items-center gap-1`}>
+                        <StatusIcon className="w-3 h-3" />
+                        <span className="hidden sm:inline">{stsCfg.label}</span>
+                      </span>
+                      {s.data_necessidade && (
+                        <span className="text-xs text-lead-400 hidden lg:block">
+                          {new Date(s.data_necessidade).toLocaleDateString('pt-BR')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Ordens de compra */}
+        {listaOrdens.length > 0 && (
+          <div className="card">
+            <div className="px-6 py-4 border-b border-lead-100">
+              <h2 className="font-semibold text-lead-900">Ordens de Compra</h2>
+            </div>
+            <div className="divide-y divide-lead-100">
+              {listaOrdens.map((oc: any) => (
+                <div key={oc.id} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
+                  <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                    <Package className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-lead-900 font-mono text-sm">{oc.numero_pedido || oc.id.slice(0, 8).toUpperCase()}</p>
+                    <p className="text-xs text-lead-500">{oc.obras?.nome} · {oc.fornecedores?.nome_fantasia || oc.fornecedores?.razao_social || 'Fornecedor não informado'}</p>
+                  </div>
+                  <div className="text-sm font-semibold text-lead-900">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(oc.valor_total)}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
