@@ -1,21 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
-import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package, Pencil } from 'lucide-react'
+import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package } from 'lucide-react'
 
-const urgenciaConfig: Record<string, { label: string; color: string }> = {
-  baixa:   { label: 'Baixa',   color: 'bg-lead-100 text-lead-600' },
-  media:   { label: 'Média',   color: 'bg-blue-50 text-blue-700' },
-  alta:    { label: 'Alta',    color: 'bg-yellow-50 text-yellow-700' },
-  urgente: { label: 'Urgente', color: 'bg-red-50 text-red-700' },
+const URGENCIA: Record<string, { label: string; badge: string }> = {
+  baixa:   { label: 'Baixa',   badge: 'badge-neutral' },
+  media:   { label: 'Média',   badge: 'badge-blue'    },
+  alta:    { label: 'Alta',    badge: 'badge-yellow'  },
+  urgente: { label: 'Urgente', badge: 'badge-red'     },
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  aberta:      { label: 'Aberta',      color: 'bg-blue-50 text-blue-700',   icon: Clock },
-  em_cotacao:  { label: 'Em cotação',  color: 'bg-yellow-50 text-yellow-700', icon: Package },
-  aprovada:    { label: 'Aprovada',    color: 'bg-brand-50 text-brand-700', icon: CheckCircle2 },
-  convertida:  { label: 'OC gerada',   color: 'bg-green-50 text-green-700', icon: CheckCircle2 },
-  cancelada:   { label: 'Cancelada',   color: 'bg-red-50 text-red-700',     icon: XCircle },
+const STATUS_SOL: Record<string, { label: string; badge: string; icon: React.ElementType }> = {
+  aberta:      { label: 'Aberta',      badge: 'badge-blue',    icon: Clock        },
+  em_cotacao:  { label: 'Em cotação',  badge: 'badge-yellow',  icon: Package      },
+  aprovada:    { label: 'Aprovada',    badge: 'badge-brand',   icon: CheckCircle2 },
+  convertida:  { label: 'OC gerada',   badge: 'badge-green',   icon: CheckCircle2 },
+  cancelada:   { label: 'Cancelada',   badge: 'badge-red',     icon: XCircle      },
 }
 
 export default async function ComprasPage() {
@@ -26,76 +26,86 @@ export default async function ComprasPage() {
     supabase.from('compras').select('*, obras(nome), fornecedores(nome_fantasia, razao_social), tipo, fornecedor_nome').order('criado_em', { ascending: false }),
   ])
 
-  const listaSolic = solicitacoes || []
+  const listaSolic  = solicitacoes || []
   const listaOrdens = ordens || []
+
+  const kpis = [
+    { label: 'Solicitações abertas',  valor: listaSolic.filter((s: any) => s.status === 'aberta').length,      cor: 'text-blue-600',  bg: 'bg-blue-50',    icon: Clock        },
+    { label: 'Em cotação',            valor: listaSolic.filter((s: any) => s.status === 'em_cotacao').length,  cor: 'text-amber-600', bg: 'bg-amber-50',   icon: Package      },
+    { label: 'Aguard. aprovação',     valor: listaSolic.filter((s: any) => s.status === 'aprovada').length,    cor: 'text-brand-600', bg: 'bg-brand-50',   icon: CheckCircle2 },
+    { label: 'Ordens de compra',      valor: listaOrdens.length,                                               cor: 'text-emerald-600', bg: 'bg-emerald-50', icon: ShoppingCart },
+  ]
 
   return (
     <>
       <Header titulo="Compras" subtitulo="Solicitações e ordens de compra" />
 
-      <div className="p-6 space-y-6">
+      <div className="page-body">
 
-        {/* Resumo */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Solicitações abertas', valor: listaSolic.filter((s: any) => s.status === 'aberta').length, cor: 'text-blue-600' },
-            { label: 'Em cotação', valor: listaSolic.filter((s: any) => s.status === 'em_cotacao').length, cor: 'text-yellow-600' },
-            { label: 'Aguardando aprovação', valor: listaSolic.filter((s: any) => s.status === 'aprovada').length, cor: 'text-brand-600' },
-            { label: 'Ordens de compra', valor: listaOrdens.length, cor: 'text-green-600' },
-          ].map(item => (
-            <div key={item.label} className="card p-4 text-center">
-              <p className={`text-2xl font-bold ${item.cor}`}>{item.valor}</p>
-              <p className="text-xs text-lead-500 mt-1">{item.label}</p>
-            </div>
-          ))}
+        {/* ── KPIs ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {kpis.map(k => {
+            const Icon = k.icon
+            return (
+              <div key={k.label} className="card p-5">
+                <div className={`w-9 h-9 rounded-xl ${k.bg} flex items-center justify-center mb-3`}>
+                  <Icon className={`w-4 h-4 ${k.cor}`} />
+                </div>
+                <p className={`text-2xl font-bold ${k.cor} tabular-nums leading-none`}>{k.valor}</p>
+                <p className="text-xs text-lead-400 mt-1">{k.label}</p>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Solicitações */}
-        <div className="card">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-lead-100">
-            <h2 className="font-semibold text-lead-900">Solicitações de Material</h2>
-            <Link href="/dashboard/compras/nova" className="btn-primary">
-              <Plus className="w-4 h-4" />
-              Nova Solicitação
+        {/* ── Solicitações ── */}
+        <div className="card animate-fade-up animation-delay-75">
+          <div className="section-header">
+            <span className="section-title">Solicitações de Material</span>
+            <Link href="/dashboard/compras/nova" className="btn-primary btn-sm">
+              <Plus className="w-3.5 h-3.5" />
+              Nova solicitação
             </Link>
           </div>
 
           {listaSolic.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <ShoppingCart className="w-10 h-10 text-lead-300 mb-3" />
-              <p className="font-medium text-lead-600">Nenhuma solicitação</p>
-              <p className="text-sm text-lead-400 mt-1">Clique em "Nova Solicitação" para começar</p>
+            <div className="empty-state py-16">
+              <div className="empty-state-icon">
+                <ShoppingCart className="w-6 h-6 text-lead-400" />
+              </div>
+              <p className="text-sm font-medium text-lead-600">Nenhuma solicitação</p>
+              <p className="text-xs text-lead-400 mt-1">Clique em "Nova Solicitação" para começar</p>
             </div>
           ) : (
-            <div className="divide-y divide-lead-100">
+            <div className="divide-y divide-lead-100/80">
               {listaSolic.map((s: any) => {
-                const urgCfg = urgenciaConfig[s.urgencia] || urgenciaConfig.media
-                const stsCfg = statusConfig[s.status] || statusConfig.aberta
-                const StatusIcon = stsCfg.icon
+                const urg = URGENCIA[s.urgencia] || URGENCIA.media
+                const sts = STATUS_SOL[s.status]  || STATUS_SOL.aberta
+                const StatusIcon = sts.icon
                 return (
-                  <Link key={s.id} href={`/dashboard/compras/${s.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
-                    <div className="w-9 h-9 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0">
-                      <ShoppingCart className="w-4 h-4 text-brand-600" />
+                  <Link key={s.id} href={`/dashboard/compras/${s.id}`}
+                    className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50/70 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
+                      <ShoppingCart className="w-3.5 h-3.5 text-brand-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-lead-900 truncate">{s.titulo}</p>
-                      <p className="text-xs text-lead-500 mt-0.5">{s.obras?.codigo} — {s.obras?.nome}</p>
+                      <p className="text-[13px] font-semibold text-lead-900 truncate">{s.titulo}</p>
+                      <p className="text-xs text-lead-400 mt-0.5">{s.obras?.codigo} — {s.obras?.nome}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`badge ${urgCfg.color} hidden sm:inline-flex`}>
-                        {s.urgencia === 'urgente' && <AlertTriangle className="w-3 h-3 mr-1" />}
-                        {urgCfg.label}
+                      <span className={`${urg.badge} hidden sm:inline-flex`}>
+                        {s.urgencia === 'urgente' && <AlertTriangle className="w-3 h-3" />}
+                        {urg.label}
                       </span>
-                      <span className={`badge ${stsCfg.color} inline-flex items-center gap-1`}>
+                      <span className={`${sts.badge} inline-flex items-center gap-1`}>
                         <StatusIcon className="w-3 h-3" />
-                        <span className="hidden sm:inline">{stsCfg.label}</span>
+                        <span className="hidden sm:inline">{sts.label}</span>
                       </span>
                       {s.data_necessidade && (
                         <span className="text-xs text-lead-400 hidden lg:block">
                           {new Date(s.data_necessidade).toLocaleDateString('pt-BR')}
                         </span>
                       )}
-                      <Pencil className="w-3.5 h-3.5 text-lead-300" />
                     </div>
                   </Link>
                 )
@@ -104,43 +114,51 @@ export default async function ComprasPage() {
           )}
         </div>
 
-        {/* Ordens de compra */}
-        <div className="card">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-lead-100">
-            <h2 className="font-semibold text-lead-900">Ordens de Compra</h2>
-            <Link href="/dashboard/compras/oc/nova" className="btn-primary">
-              <Plus className="w-4 h-4" />
-              Nova O.C. Direta
+        {/* ── Ordens de compra ── */}
+        <div className="card animate-fade-up animation-delay-150">
+          <div className="section-header">
+            <span className="section-title">Ordens de Compra</span>
+            <Link href="/dashboard/compras/oc/nova" className="btn-primary btn-sm">
+              <Plus className="w-3.5 h-3.5" />
+              Nova O.C. direta
             </Link>
           </div>
           {listaOrdens.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="w-8 h-8 text-lead-300 mb-2" />
+            <div className="empty-state py-12">
+              <div className="empty-state-icon">
+                <Package className="w-6 h-6 text-lead-400" />
+              </div>
               <p className="text-sm font-medium text-lead-600">Nenhuma ordem de compra</p>
               <p className="text-xs text-lead-400 mt-1">Gere uma O.C. via cotação aprovada ou diretamente aqui</p>
             </div>
           ) : (
-            <div className="divide-y divide-lead-100">
+            <div className="divide-y divide-lead-100/80">
               {listaOrdens.map((oc: any) => (
-                <Link key={oc.id} href={`/dashboard/compras/oc/${oc.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50 transition-colors">
-                  <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                    <Package className="w-4 h-4 text-green-600" />
+                <Link key={oc.id} href={`/dashboard/compras/oc/${oc.id}`}
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-lead-50/70 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                    <Package className="w-3.5 h-3.5 text-emerald-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-lead-900 font-mono text-sm">{oc.numero_pedido || oc.id.slice(0, 8).toUpperCase()}</p>
-                      {oc.tipo === 'direta' && <span className="badge bg-purple-50 text-purple-700 text-[10px]">Direta</span>}
+                      <p className="text-[13px] font-semibold text-lead-900 font-mono">
+                        {oc.numero_pedido || oc.id.slice(0, 8).toUpperCase()}
+                      </p>
+                      {oc.tipo === 'direta' && <span className="badge-purple text-[10px]">Direta</span>}
                     </div>
-                    <p className="text-xs text-lead-500">{oc.obras?.nome} · {oc.fornecedor_nome || oc.fornecedores?.nome_fantasia || oc.fornecedores?.razao_social || '—'}</p>
+                    <p className="text-xs text-lead-400 truncate">
+                      {oc.obras?.nome} · {oc.fornecedor_nome || oc.fornecedores?.nome_fantasia || oc.fornecedores?.razao_social || '—'}
+                    </p>
                   </div>
-                  <div className="text-sm font-semibold text-lead-900">
+                  <span className="text-[13px] font-bold text-lead-900 tabular-nums shrink-0">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(oc.valor_total)}
-                  </div>
+                  </span>
                 </Link>
               ))}
             </div>
           )}
         </div>
+
       </div>
     </>
   )

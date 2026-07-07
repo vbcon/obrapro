@@ -6,12 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import type { Papel } from '@/lib/types/roles'
 import {
   Building2, HardHat, CalendarDays, ShoppingCart,
-  MessageCircle, LogOut, ChevronRight, LayoutDashboard,
+  MessageCircle, LogOut, LayoutDashboard,
   Settings, BookOpen, DollarSign, Users,
 } from 'lucide-react'
 
-// Definição de quais módulos cada papel pode ver
-const NAV_TODOS = [
+const NAV_PRINCIPAL = [
   { label: 'Dashboard',      href: '/dashboard',            icon: LayoutDashboard, exact: true, papeis: ['admin','cliente','arquiteto'] },
   { label: 'Obras',          href: '/dashboard/obras',      icon: HardHat,         papeis: ['admin','cliente'] },
   { label: 'Compras',        href: '/dashboard/compras',    icon: ShoppingCart,    papeis: ['admin','cliente'] },
@@ -22,14 +21,14 @@ const NAV_TODOS = [
 ]
 
 const NAV_SISTEMA = [
-  { label: 'Usuários',       href: '/dashboard/configuracoes/usuarios', icon: Users,    papeis: ['admin'] },
-  { label: 'Configurações',  href: '/dashboard/configuracoes',          icon: Settings, papeis: ['admin','cliente','arquiteto'], exact: true },
+  { label: 'Usuários',      href: '/dashboard/configuracoes/usuarios', icon: Users,    papeis: ['admin'] },
+  { label: 'Configurações', href: '/dashboard/configuracoes',          icon: Settings, papeis: ['admin','cliente','arquiteto'], exact: true },
 ]
 
-const PAPEL_BADGE: Record<Papel, { label: string; cor: string }> = {
-  admin:     { label: 'Admin',     cor: 'bg-brand-500/20 text-brand-400' },
-  cliente:   { label: 'Cliente',   cor: 'bg-blue-500/20 text-blue-400' },
-  arquiteto: { label: 'Arquiteto', cor: 'bg-purple-500/20 text-purple-400' },
+const PAPEL_INFO: Record<Papel, { label: string; cls: string }> = {
+  admin:     { label: 'Admin',     cls: 'bg-orange-500/15 text-orange-300' },
+  cliente:   { label: 'Cliente',   cls: 'bg-sky-500/15 text-sky-300' },
+  arquiteto: { label: 'Arquiteto', cls: 'bg-violet-500/15 text-violet-300' },
 }
 
 interface SidebarProps {
@@ -43,8 +42,7 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
   const router = useRouter()
 
   function isActive(href: string, exact?: boolean) {
-    if (exact) return pathname === href
-    return pathname.startsWith(href)
+    return exact ? pathname === href : pathname.startsWith(href)
   }
 
   async function handleLogout() {
@@ -54,100 +52,176 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
     router.refresh()
   }
 
-  const navVisiveis = NAV_TODOS.filter(item => item.papeis.includes(papel))
-  const sistemaPapeis = NAV_SISTEMA.filter(item => item.papeis.includes(papel))
-  const badge = PAPEL_BADGE[papel] || PAPEL_BADGE.admin
+  const navPrincipal = NAV_PRINCIPAL.filter(i => i.papeis.includes(papel))
+  const navSistema   = NAV_SISTEMA.filter(i => i.papeis.includes(papel))
+  const papelInfo    = PAPEL_INFO[papel] ?? PAPEL_INFO.admin
+
+  const initials = nomeUsuario
+    ? nomeUsuario.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()
+    : '?'
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-lead-900 border-r border-lead-800">
+    <aside className="fixed inset-y-0 left-0 z-50 flex flex-col w-64"
+      style={{ background: '#0d1117', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-lead-800">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-brand-500 shadow-md shadow-brand-500/20 shrink-0">
-          <Building2 className="w-5 h-5 text-white" />
+      {/* ── Logo ── */}
+      <div className="flex items-center gap-3 px-5 shrink-0"
+        style={{ height: 'var(--header-height)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-500 shrink-0"
+          style={{ boxShadow: '0 0 0 3px rgba(249,115,22,0.15)' }}>
+          <Building2 className="w-3.5 h-3.5 text-white" />
         </div>
-        <div>
-          <span className="text-lg font-bold text-white tracking-tight">
-            OBRA<span className="text-brand-400">PRO</span>
-          </span>
-          <p className="text-[10px] text-lead-500 leading-none mt-0.5">Gestão de Obras</p>
-        </div>
+        <span className="text-[15px] font-bold text-white tracking-tight select-none">
+          Obra<span className="text-brand-400">Pro</span>
+        </span>
       </div>
 
-      {/* Navegação */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2 mt-1">
-          Menu Principal
-        </p>
+      {/* ── Navigation ── */}
+      <nav className="flex-1 px-2.5 py-4 overflow-y-auto">
 
-        {navVisiveis.map(item => {
-          const active = isActive(item.href, item.exact)
-          const Icon = item.icon
-          return (
-            <Link
+        <NavSection label="Módulos">
+          {navPrincipal.map(item => (
+            <NavItem
               key={item.href}
               href={item.href}
-              className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
-                active
-                  ? 'bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/20'
-                  : 'text-lead-400 hover:bg-lead-800 hover:text-lead-100'
-              }`}
-            >
-              <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-brand-400' : 'text-lead-500 group-hover:text-lead-300'}`} />
-              <span className="flex-1">{item.label}</span>
-              {active && <ChevronRight className="w-3.5 h-3.5 text-brand-400/60" />}
-            </Link>
-          )
-        })}
+              icon={item.icon}
+              label={item.label}
+              active={isActive(item.href, item.exact)}
+            />
+          ))}
+        </NavSection>
 
-        {sistemaPapeis.length > 0 && (
-          <div className="pt-4">
-            <p className="px-3 text-[10px] font-semibold text-lead-500 uppercase tracking-widest mb-2">Sistema</p>
-            {sistemaPapeis.map(item => {
-              const active = isActive(item.href, item.exact)
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
-                    active
-                      ? 'bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/20'
-                      : 'text-lead-400 hover:bg-lead-800 hover:text-lead-100'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-brand-400' : 'text-lead-500 group-hover:text-lead-300'}`} />
-                  <span className="flex-1">{item.label}</span>
-                  {active && <ChevronRight className="w-3.5 h-3.5 text-brand-400/60" />}
-                </Link>
-              )
-            })}
-          </div>
+        {navSistema.length > 0 && (
+          <NavSection label="Sistema" className="mt-2">
+            {navSistema.map(item => (
+              <NavItem
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+                active={isActive(item.href, item.exact)}
+              />
+            ))}
+          </NavSection>
         )}
+
       </nav>
 
-      {/* Perfil */}
-      <div className="border-t border-lead-800 p-3">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 font-semibold text-sm shrink-0">
-            {nomeUsuario?.charAt(0).toUpperCase() || '?'}
+      {/* ── User profile ── */}
+      <div className="px-2.5 pb-3 pt-2 shrink-0"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center gap-3 px-2.5 py-2 rounded-lg group"
+          style={{ transition: 'background 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+
+          {/* Avatar */}
+          <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 text-[11px] font-bold text-orange-300 select-none"
+            style={{ background: 'rgba(249,115,22,0.12)', boxShadow: '0 0 0 1px rgba(249,115,22,0.2)' }}>
+            {initials}
           </div>
+
+          {/* Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium text-lead-200 truncate">{nomeUsuario || 'Usuário'}</p>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badge.cor} shrink-0`}>{badge.label}</span>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <p className="text-[13px] font-medium leading-none truncate"
+                style={{ color: 'rgba(255,255,255,0.85)' }}>
+                {nomeUsuario || 'Usuário'}
+              </p>
+              <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none ${papelInfo.cls}`}>
+                {papelInfo.label}
+              </span>
             </div>
-            <p className="text-xs text-lead-500 truncate">{emailUsuario || ''}</p>
+            <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {emailUsuario}
+            </p>
           </div>
+
+          {/* Logout */}
           <button
             onClick={handleLogout}
             title="Sair"
-            className="p-1.5 rounded-md text-lead-500 hover:text-red-400 hover:bg-red-400/10 transition-all duration-150"
+            className="p-1.5 rounded-md transition-all duration-150 opacity-0 group-hover:opacity-100"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#f87171'
+              e.currentTarget.style.background = 'rgba(239,68,68,0.1)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'rgba(255,255,255,0.3)'
+              e.currentTarget.style.background = 'transparent'
+            }}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
+
     </aside>
+  )
+}
+
+/* ── Sub-components ────────────────────────────────────────── */
+
+function NavSection({ label, children, className = '' }: {
+  label: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+        style={{ color: 'rgba(255,255,255,0.22)' }}>
+        {label}
+      </p>
+      <div className="space-y-0.5">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function NavItem({ href, icon: Icon, label, active }: {
+  href: string
+  icon: React.ElementType
+  label: string
+  active: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150 select-none"
+      style={{
+        fontWeight: active ? 500 : 400,
+        color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.42)',
+        background: active ? 'rgba(255,255,255,0.07)' : 'transparent',
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+          e.currentTarget.style.color = 'rgba(255,255,255,0.7)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          e.currentTarget.style.background = 'transparent'
+          e.currentTarget.style.color = 'rgba(255,255,255,0.42)'
+        }
+      }}
+    >
+      <Icon
+        className="shrink-0"
+        style={{
+          width: 16,
+          height: 16,
+          color: active ? '#fb923c' : 'rgba(255,255,255,0.3)',
+          transition: 'color 0.15s',
+        }}
+      />
+      <span className="flex-1 leading-none">{label}</span>
+      {active && (
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#fb923c', opacity: 0.7 }} />
+      )}
+    </Link>
   )
 }

@@ -117,7 +117,7 @@ export default function NovaObraPage() {
               </div>
               <div>
                 <label className="label">Tipo</label>
-                <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="input">
+                <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="select">
                   {TIPOS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                 </select>
               </div>
@@ -146,7 +146,7 @@ export default function NovaObraPage() {
               </div>
               <div>
                 <label className="label">Estado</label>
-                <select value={form.estado} onChange={e => set('estado', e.target.value)} className="input">
+                <select value={form.estado} onChange={e => set('estado', e.target.value)} className="select">
                   {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
                 </select>
               </div>
@@ -182,7 +182,7 @@ export default function NovaObraPage() {
               </div>
               <div>
                 <label className="label">Forma de Pagamento</label>
-                <select value={form.forma_pagamento} onChange={e => set('forma_pagamento', e.target.value)} className="input">
+                <select value={form.forma_pagamento} onChange={e => set('forma_pagamento', e.target.value)} className="select">
                   <option value="">Selecione...</option>
                   {FORMAS_PAGAMENTO.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import { MessageCircle, Plus, Send, CheckCheck, Clock, XCircle, Users } from 'lucide-react'
 import type { WhatsappMensagem } from '@/lib/types/database'
@@ -71,7 +71,7 @@ export default async function WhatsappPage() {
 
               <div>
                 <label className="label">Obra (opcional)</label>
-                <select className="input">
+                <select className="select">
                   <option value="">Selecione uma obra...</option>
                 </select>
               </div>
@@ -192,3 +192,4 @@ export default async function WhatsappPage() {
     </>
   )
 }
+

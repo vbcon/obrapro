@@ -152,7 +152,7 @@ export default function CronogramaPage() {
           <select
             value={obraFiltro}
             onChange={e => setObraFiltro(e.target.value)}
-            className="input max-w-xs"
+            className="select max-w-xs"
           >
             <option value="">Todas as obras</option>
             {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
