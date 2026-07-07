@@ -29,7 +29,11 @@ export async function POST(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  const { error } = await adminSupabase.auth.admin.updateUserById(id, { password: senha })
+  // Redefine a senha E confirma o e-mail (caso o usuário nunca tenha confirmado)
+  const { error } = await adminSupabase.auth.admin.updateUserById(id, {
+    password: senha,
+    email_confirm: true,
+  })
   if (error) {
     return NextResponse.json({ error: 'Erro ao redefinir senha.' }, { status: 500 })
   }
