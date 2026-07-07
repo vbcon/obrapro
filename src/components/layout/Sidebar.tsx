@@ -7,17 +7,18 @@ import type { Papel } from '@/lib/types/roles'
 import {
   Building2, HardHat, CalendarDays, ShoppingCart,
   MessageCircle, LogOut, LayoutDashboard,
-  Settings, BookOpen, DollarSign, Users,
+  Settings, BookOpen, DollarSign, Users, Inbox,
 } from 'lucide-react'
 
 const NAV_PRINCIPAL = [
-  { label: 'Dashboard',      href: '/dashboard',            icon: LayoutDashboard, exact: true, papeis: ['admin','cliente','arquiteto'] },
-  { label: 'Obras',          href: '/dashboard/obras',      icon: HardHat,         papeis: ['admin','cliente'] },
-  { label: 'Compras',        href: '/dashboard/compras',    icon: ShoppingCart,    papeis: ['admin','cliente'] },
-  { label: 'Financeiro',     href: '/dashboard/financeiro', icon: DollarSign,      papeis: ['admin','cliente'] },
-  { label: 'Cronograma',     href: '/dashboard/cronograma', icon: CalendarDays,    papeis: ['admin','cliente','arquiteto'] },
-  { label: 'Status da Obra', href: '/dashboard/diario',     icon: BookOpen,        papeis: ['admin','cliente','arquiteto'] },
-  { label: 'WhatsApp',       href: '/dashboard/whatsapp',   icon: MessageCircle,   papeis: ['admin'] },
+  { label: 'Dashboard',      href: '/dashboard',                icon: LayoutDashboard, exact: true, papeis: ['admin','cliente','arquiteto'] },
+  { label: 'Obras',          href: '/dashboard/obras',          icon: HardHat,         papeis: ['admin','cliente'] },
+  { label: 'Compras',        href: '/dashboard/compras',        icon: ShoppingCart,    papeis: ['admin','cliente'] },
+  { label: 'Financeiro',     href: '/dashboard/financeiro',     icon: DollarSign,      papeis: ['admin','cliente'] },
+  { label: 'Cronograma',     href: '/dashboard/cronograma',     icon: CalendarDays,    papeis: ['admin','cliente','arquiteto'] },
+  { label: 'Status da Obra', href: '/dashboard/diario',         icon: BookOpen,        papeis: ['admin','cliente','arquiteto'] },
+  { label: 'Solicitações',   href: '/dashboard/solicitacoes',   icon: Inbox,           papeis: ['admin','cliente','arquiteto'] },
+  { label: 'WhatsApp',       href: '/dashboard/whatsapp',       icon: MessageCircle,   papeis: ['admin'] },
 ]
 
 const NAV_SISTEMA = [
