@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 // createClient usado apenas no useEffect para leitura (não precisa service role)
-import { ArrowLeft, Save, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Save, AlertCircle, KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { PAPEL_LABELS, type Papel } from '@/lib/types/roles'
 
 export default function EditarUsuarioPage() {
@@ -15,9 +15,13 @@ export default function EditarUsuarioPage() {
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [sucesso, setSucesso] = useState('')
   const [obras, setObras] = useState<{ id: string; nome: string; codigo: string }[]>([])
   const [obrasSelecionadas, setObrasSelecionadas] = useState<string[]>([])
   const [form, setForm] = useState({ nome: '', email: '', papel: 'cliente' as Papel, empresa: '', telefone: '' })
+  const [novaSenha, setNovaSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [resetando, setResetando] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -68,8 +72,27 @@ export default function EditarUsuarioPage() {
     const data = await res.json()
     if (!res.ok) { setErro(data.error || 'Erro ao salvar.'); setSalvando(false); return }
 
-    router.push('/dashboard/configuracoes/usuarios')
+    setSucesso('Usuário atualizado com sucesso!')
+    setSalvando(false)
+    setTimeout(() => router.push('/dashboard/configuracoes/usuarios'), 1000)
     router.refresh()
+  }
+
+  async function handleResetarSenha() {
+    if (!novaSenha || novaSenha.length < 6) { setErro('Senha deve ter pelo menos 6 caracteres.'); return }
+    setErro('')
+    setResetando(true)
+    const res = await fetch('/api/usuarios/resetar-senha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, senha: novaSenha }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErro(data.error || 'Erro ao redefinir senha.'); setResetando(false); return }
+    setSucesso('Senha redefinida com sucesso!')
+    setNovaSenha('')
+    setResetando(false)
+    setTimeout(() => setSucesso(''), 3000)
   }
 
   if (carregando) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>
@@ -82,7 +105,8 @@ export default function EditarUsuarioPage() {
       <div className="p-6 max-w-2xl">
         <Link href="/dashboard/configuracoes/usuarios" className="inline-flex items-center gap-2 text-sm text-lead-500 hover:text-lead-700 mb-6"><ArrowLeft className="w-4 h-4" />Voltar</Link>
 
-        {erro && <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4 mb-6"><AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" /><p className="text-red-700 text-sm">{erro}</p></div>}
+        {erro && <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6"><AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" /><p className="text-red-700 text-sm">{erro}</p></div>}
+        {sucesso && <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4 mb-6"><CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 shrink-0" /><p className="text-green-700 text-sm">{sucesso}</p></div>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -157,6 +181,31 @@ export default function EditarUsuarioPage() {
               )}
             </div>
           )}
+
+          {/* Redefinir senha */}
+          <div className="card p-6">
+            <h2 className="font-semibold text-lead-900 mb-1 flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-lead-500" />Redefinir senha
+            </h2>
+            <p className="text-sm text-lead-500 mb-4">Defina uma nova senha para este usuário sem precisar de e-mail.</p>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={novaSenha}
+                  onChange={e => setNovaSenha(e.target.value)}
+                  placeholder="Nova senha (mín. 6 caracteres)"
+                  className="input pr-10"
+                />
+                <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lead-400 hover:text-lead-600">
+                  {mostrarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button type="button" onClick={handleResetarSenha} disabled={resetando || !novaSenha} className="btn-secondary shrink-0">
+                {resetando ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Salvando...</> : <><KeyRound className="w-4 h-4" />Redefinir</>}
+              </button>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3">
             <Link href="/dashboard/configuracoes/usuarios" className="btn-secondary">Cancelar</Link>
