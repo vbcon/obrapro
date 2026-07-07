@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
+// createClient usado apenas no useEffect para leitura (não precisa service role)
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react'
 import { PAPEL_LABELS, type Papel } from '@/lib/types/roles'
 
@@ -51,28 +52,21 @@ export default function EditarUsuarioPage() {
       setErro('Selecione pelo menos uma obra para este usuário.'); return
     }
     setSalvando(true)
-    const supabase = createClient()
 
-    // Atualizar perfil
-    const { error: perfErr } = await supabase.from('perfis').update({
-      nome: form.nome,
-      papel: form.papel,
-      empresa: form.empresa || null,
-      telefone: form.telefone || null,
-    }).eq('id', id)
-
-    if (perfErr) { setErro('Erro ao salvar.'); setSalvando(false); return }
-
-    // Atualizar vínculos de obras
-    // Deletar todos os vínculos existentes
-    await supabase.from('usuario_obras').delete().eq('usuario_id', id)
-
-    // Inserir novos vínculos
-    if (form.papel !== 'admin' && obrasSelecionadas.length > 0) {
-      await supabase.from('usuario_obras').insert(
-        obrasSelecionadas.map(obraId => ({ usuario_id: id, obra_id: obraId }))
-      )
-    }
+    const res = await fetch('/api/usuarios/atualizar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        nome: form.nome,
+        papel: form.papel,
+        empresa: form.empresa,
+        telefone: form.telefone,
+        obra_ids: obrasSelecionadas,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErro(data.error || 'Erro ao salvar.'); setSalvando(false); return }
 
     router.push('/dashboard/configuracoes/usuarios')
     router.refresh()
