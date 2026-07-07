@@ -103,10 +103,16 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="flex justify-end -mt-1">
+              <Link href="/esqueci-senha" className="text-xs text-lead-500 hover:text-brand-600 transition-colors">
+                Esqueci minha senha
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={carregando}
-              className="btn-primary w-full mt-2"
+              className="btn-primary w-full"
             >
               {carregando ? (
                 <>
@@ -119,15 +125,6 @@ export default function LoginPage() {
               ) : 'Entrar'}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-lead-500">
-              Não tem conta?{' '}
-              <Link href="/register" className="font-semibold text-brand-600 hover:text-brand-700 transition-colors">
-                Criar conta
-              </Link>
-            </p>
-          </div>
         </div>
 
         <p className="text-center text-lead-500 text-xs mt-6">

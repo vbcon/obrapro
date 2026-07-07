@@ -27,8 +27,12 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register')
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/esqueci-senha')
+  const isOpenPage = pathname.startsWith('/auth/') || pathname.startsWith('/nova-senha') || pathname.startsWith('/aprovar')
   const isDashboard = pathname.startsWith('/dashboard')
+
+  // Rotas abertas (callback de auth, definição de senha) sempre acessíveis
+  if (isOpenPage) return supabaseResponse
 
   if (!user && isDashboard) {
     const url = request.nextUrl.clone()
