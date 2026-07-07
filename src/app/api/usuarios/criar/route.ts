@@ -3,14 +3,18 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 const ERROS_PT: Record<string, string> = {
-  'User already registered': 'Este e-mail já está cadastrado no sistema.',
-  'invalid email': 'E-mail inválido.',
-  'Email rate limit exceeded': 'Muitos convites enviados. Aguarde alguns minutos.',
+  'user already registered': 'Este e-mail já está cadastrado no sistema.',
+  'email already registered': 'Este e-mail já está cadastrado no sistema.',
+  'invalid email': 'Endereço de e-mail inválido.',
+  'email rate limit exceeded': 'Muitos e-mails enviados. Aguarde alguns minutos.',
+  'password should be at least': 'A senha deve ter pelo menos 6 caracteres.',
+  'unable to validate email address': 'E-mail inválido ou domínio não aceito.',
 }
 
 function traduzirErro(msg: string): string {
+  const lower = msg.toLowerCase()
   for (const [en, pt] of Object.entries(ERROS_PT)) {
-    if (msg.toLowerCase().includes(en.toLowerCase())) return pt
+    if (lower.includes(en)) return pt
   }
   return msg
 }
@@ -30,14 +34,18 @@ export async function POST(request: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceKey) {
     return NextResponse.json({
-      error: 'Configuração incompleta: SUPABASE_SERVICE_ROLE_KEY não definida. Adicione ao .env.local e às variáveis de ambiente do Vercel.',
+      error: 'Configuração incompleta no servidor. Contate o administrador.',
     }, { status: 500 })
   }
 
-  const { nome, email, papel, obra_ids } = await request.json()
+  const body = await request.json()
+  const { nome, email, senha, papel, obra_ids } = body
 
   if (!nome || !email || !papel) {
     return NextResponse.json({ error: 'Nome, e-mail e papel são obrigatórios.' }, { status: 400 })
+  }
+  if (!senha || senha.length < 6) {
+    return NextResponse.json({ error: 'Senha deve ter pelo menos 6 caracteres.' }, { status: 400 })
   }
 
   const adminSupabase = createClient(
@@ -46,28 +54,27 @@ export async function POST(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Verificar se e-mail já existe na tabela perfis
+  // Verificar se e-mail já existe
   const { data: existente } = await adminSupabase
     .from('perfis').select('id').eq('email', email).maybeSingle()
   if (existente) {
     return NextResponse.json({ error: 'Este e-mail já está cadastrado no sistema.' }, { status: 400 })
   }
 
-  // Determinar URL base para o redirect do convite
-  const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.vbcon.com.br'
-
-  // Convidar usuário (ele receberá e-mail para definir a própria senha)
-  const { data: invited, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(email, {
-    data: { nome },
-    redirectTo: `${origin}/auth/callback?type=invite`,
+  // Criar usuário
+  const { data: created, error: createError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+    user_metadata: { nome },
   })
 
-  if (inviteError || !invited?.user) {
-    const msg = traduzirErro(inviteError?.message || 'Erro ao convidar usuário')
+  if (createError || !created?.user) {
+    const msg = traduzirErro(createError?.message || 'Erro ao criar usuário')
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
-  const newUserId = invited.user.id
+  const newUserId = created.user.id
 
   // Criar perfil com papel
   const { error: perfErr } = await adminSupabase.from('perfis').upsert({
@@ -78,7 +85,6 @@ export async function POST(request: Request) {
   })
 
   if (perfErr) {
-    // Rollback: remover o usuário criado
     await adminSupabase.auth.admin.deleteUser(newUserId)
     return NextResponse.json({ error: 'Erro ao criar perfil. Tente novamente.' }, { status: 500 })
   }
