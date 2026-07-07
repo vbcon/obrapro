@@ -8,7 +8,7 @@ import Header from '@/components/layout/Header'
 import {
   ArrowLeft, Building2, MapPin, Calendar, Package, DollarSign,
   CheckCircle2, Copy, Check, Printer, Plus, FileText, Receipt,
-  AlertCircle, ExternalLink, Banknote, Trash2, X, Upload,
+  AlertCircle, ExternalLink, Banknote, Trash2, X, Upload, Sparkles, Loader2,
 } from 'lucide-react'
 
 function fmt(v: number) {
@@ -52,6 +52,7 @@ export default function OcDetailPage() {
   const [arquivo, setArquivo] = useState<File | null>(null)
   const [salvandoDoc, setSalvandoDoc] = useState(false)
   const [erroDoc, setErroDoc] = useState('')
+  const [extraindo, setExtraindo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -80,6 +81,32 @@ export default function OcDetailPage() {
   }
 
   function setDoc(f: string, v: string) { setDocForm(p => ({ ...p, [f]: v })) }
+
+  async function extrairComIA() {
+    if (!arquivo) return
+    setExtraindo(true)
+    setErroDoc('')
+    try {
+      const fd = new FormData()
+      fd.append('file', arquivo)
+      const res = await fetch('/api/ai/extrair-nf', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.error) { setErroDoc('IA não conseguiu ler o documento.'); return }
+      setDocForm(prev => ({
+        ...prev,
+        numero_nota:     data.numero_nota     ?? prev.numero_nota,
+        fornecedor:      data.fornecedor      ?? prev.fornecedor,
+        valor:           data.valor != null   ? String(data.valor) : prev.valor,
+        data_emissao:    data.data_emissao    ?? prev.data_emissao,
+        data_vencimento: data.data_vencimento ?? prev.data_vencimento,
+        descricao:       data.descricao       ?? prev.descricao,
+      }))
+    } catch {
+      setErroDoc('Erro ao chamar IA. Verifique a ANTHROPIC_API_KEY.')
+    } finally {
+      setExtraindo(false)
+    }
+  }
 
   async function salvarDoc(e: React.FormEvent) {
     e.preventDefault()
@@ -420,6 +447,20 @@ export default function OcDetailPage() {
                       onChange={e => setArquivo(e.target.files?.[0] ?? null)}
                     />
                   </label>
+                  {arquivo && (
+                    <button
+                      type="button"
+                      onClick={extrairComIA}
+                      disabled={extraindo}
+                      className="mt-2 flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg transition-all disabled:opacity-60"
+                      style={{ background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff' }}
+                    >
+                      {extraindo
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Extraindo com IA...</>
+                        : <><Sparkles className="w-3.5 h-3.5" />Extrair dados com IA</>
+                      }
+                    </button>
+                  )}
                 </div>
               </div>
 

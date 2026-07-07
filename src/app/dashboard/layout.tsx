@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/Sidebar'
+import ChatWidget from '@/components/ai/ChatWidget'
 import { UserProvider } from '@/lib/context/UserContext'
 import type { Papel } from '@/lib/types/roles'
 
@@ -42,6 +43,7 @@ export default async function DashboardLayout({
             {children}
           </main>
         </div>
+        <ChatWidget />
       </div>
     </UserProvider>
   )
