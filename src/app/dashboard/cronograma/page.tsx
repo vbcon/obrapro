@@ -29,12 +29,14 @@ function cor(cat?: string) { return CATEGORIA_CORES[cat || 'outro'] || CATEGORIA
 
 function fmtData(d?: string) {
   if (!d) return '—'
-  return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  const date = new Date(d.slice(0, 10) + 'T12:00:00')
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function calcTermino(inicio?: string, dias?: number) {
   if (!inicio || !dias) return null
-  const d = new Date(inicio + 'T00:00:00')
+  const d = new Date(inicio.slice(0, 10) + 'T12:00:00')
   d.setDate(d.getDate() + dias - 1)
   return d.toISOString().split('T')[0]
 }
