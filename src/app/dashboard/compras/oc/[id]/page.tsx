@@ -47,8 +47,6 @@ export default function OcDetailPage() {
   const [carregando, setCarregando] = useState(true)
   const [copiado, setCopiado]   = useState(false)
   const [copiadoLink, setCopiadoLink] = useState(false)
-  const [enviandoWA, setEnviandoWA] = useState(false)
-  const [msgWA, setMsgWA] = useState<{ ok: boolean; texto: string } | null>(null)
 
   // form novo doc
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -91,31 +89,15 @@ export default function OcDetailPage() {
     setTimeout(() => setCopiadoLink(false), 2500)
   }
 
-  async function enviarWhatsApp() {
+  function abrirWhatsApp() {
     if (!oc.telefone_cliente) return
-    setEnviandoWA(true)
-    setMsgWA(null)
-    try {
-      const res = await fetch('/api/whatsapp/enviar-oc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telefone:    oc.telefone_cliente,
-          numero_oc:   oc.numero_pedido,
-          obra_nome:   oc.obras?.nome,
-          token:       oc.token_aprovacao,
-        }),
-      })
-      const data = await res.json()
-      setMsgWA(data.ok
-        ? { ok: true,  texto: 'Mensagem enviada com sucesso via WhatsApp!' }
-        : { ok: false, texto: data.erro || 'Erro ao enviar. Verifique as variáveis de ambiente do WhatsApp.' }
-      )
-    } catch {
-      setMsgWA({ ok: false, texto: 'Erro de conexão ao enviar WhatsApp.' })
-    } finally {
-      setEnviandoWA(false)
-    }
+    const link = `${window.location.origin}/aprovar-oc/${oc.token_aprovacao}`
+    const msg = encodeURIComponent(
+      `Olá! 👋\n\nA *${oc.numero_pedido}* da obra *${oc.obras?.nome || ''}* está aguardando sua aprovação.\n\nClique aqui para revisar e aprovar:\n${link}`
+    )
+    const tel = oc.telefone_cliente.replace(/\D/g, '').replace(/^0+/, '')
+    const numero = tel.startsWith('55') ? tel : `55${tel}`
+    window.open(`https://wa.me/${numero}?text=${msg}`, '_blank')
   }
 
   function setDoc(f: string, v: string) { setDocForm(p => ({ ...p, [f]: v })) }
@@ -450,33 +432,15 @@ export default function OcDetailPage() {
 
             {/* Botão WhatsApp */}
             {oc.telefone_cliente ? (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={enviarWhatsApp}
-                  disabled={enviandoWA}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
-                  style={{ background: enviandoWA ? '#6b7280' : '#25D366' }}
-                >
-                  {enviandoWA
-                    ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
-                    : <><MessageCircle className="w-4 h-4" />Enviar via WhatsApp — {oc.telefone_cliente}</>
-                  }
-                </button>
-                {msgWA && (
-                  <div className={`flex items-center gap-2 text-sm rounded-lg p-3 ${
-                    msgWA.ok
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {msgWA.ok
-                      ? <CheckCircle2 className="w-4 h-4 shrink-0" />
-                      : <AlertCircle className="w-4 h-4 shrink-0" />
-                    }
-                    {msgWA.texto}
-                  </div>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={abrirWhatsApp}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                style={{ background: '#25D366' }}
+              >
+                <MessageCircle className="w-4 h-4" />
+                Enviar via WhatsApp — {oc.telefone_cliente}
+              </button>
             ) : (
               <p className="text-sm text-lead-400">
                 Nenhum WhatsApp do cliente cadastrado nesta O.C.
