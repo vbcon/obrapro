@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import { Building2, Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function NovaSenhaPage() {
   const router = useRouter()
@@ -49,13 +50,8 @@ export default function NovaSenhaPage() {
     <div className="min-h-screen bg-gradient-to-br from-lead-900 via-lead-800 to-lead-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
 
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-500 shadow-lg shadow-brand-500/30 mb-4">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            OBRA<span className="text-brand-400">PRO</span>
-          </h1>
+        <div className="flex justify-center mb-8">
+          <Image src="/logo.png" alt="VBCON Engenharia" width={120} height={120} className="object-contain" priority />
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">

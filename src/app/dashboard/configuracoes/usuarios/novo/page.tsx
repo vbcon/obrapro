@@ -1,21 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, UserPlus, AlertCircle, CheckCircle2, Mail } from 'lucide-react'
 import { PAPEL_LABELS, type Papel } from '@/lib/types/roles'
 
 export default function NovoUsuarioPage() {
-  const router = useRouter()
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
-  const [sucesso, setSucesso] = useState('')
+  const [sucesso, setSucesso] = useState<{ nome: string; email: string } | null>(null)
   const [obras, setObras] = useState<{ id: string; nome: string; codigo: string }[]>([])
-  const [mostrarSenha, setMostrarSenha] = useState(false)
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', papel: 'cliente' as Papel, empresa: '', telefone: '' })
+  const [form, setForm] = useState({ nome: '', email: '', papel: 'cliente' as Papel, empresa: '', telefone: '' })
   const [obrasSelecionadas, setObrasSelecionadas] = useState<string[]>([])
 
   useEffect(() => {
@@ -31,10 +28,8 @@ export default function NovoUsuarioPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
-    setSucesso('')
 
-    if (!form.nome || !form.email || !form.senha) { setErro('Preencha nome, e-mail e senha.'); return }
-    if (form.senha.length < 6) { setErro('Senha deve ter pelo menos 6 caracteres.'); return }
+    if (!form.nome || !form.email) { setErro('Preencha nome e e-mail.'); return }
     if (form.papel !== 'admin' && obrasSelecionadas.length === 0) {
       setErro('Selecione pelo menos uma obra para este usuário.'); return
     }
@@ -46,7 +41,6 @@ export default function NovoUsuarioPage() {
       body: JSON.stringify({
         nome: form.nome,
         email: form.email,
-        senha: form.senha,
         papel: form.papel,
         obra_ids: obrasSelecionadas,
       }),
@@ -58,7 +52,7 @@ export default function NovoUsuarioPage() {
       return
     }
 
-    setSucesso(`Usuário ${form.nome} criado com sucesso! Um e-mail foi enviado para ${form.email} para redefinição de senha.`)
+    setSucesso({ nome: form.nome, email: form.email })
     setSalvando(false)
   }
 
@@ -67,17 +61,25 @@ export default function NovoUsuarioPage() {
       <>
         <Header titulo="Novo Usuário" subtitulo="Usuário criado" />
         <div className="p-6 max-w-2xl">
-          <div className="card p-10 flex flex-col items-center text-center gap-4">
+          <div className="card p-10 flex flex-col items-center text-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-lead-900">Usuário criado!</h2>
-              <p className="text-sm text-lead-500 mt-2 max-w-sm">{sucesso}</p>
+              <h2 className="text-xl font-bold text-lead-900">Convite enviado!</h2>
+              <p className="text-sm text-lead-500 mt-2">
+                <strong>{sucesso.nome}</strong> receberá um e-mail em <strong>{sucesso.email}</strong> com um link para definir sua senha e acessar o sistema.
+              </p>
+            </div>
+            <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3 text-left">
+              <Mail className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-blue-700">
+                O usuário deve clicar no link do e-mail para definir sua própria senha. O link expira em 24 horas.
+              </p>
             </div>
             <div className="flex gap-3 mt-2">
               <button
-                onClick={() => { setSucesso(''); setForm({ nome: '', email: '', senha: '', papel: 'cliente', empresa: '', telefone: '' }); setObrasSelecionadas([]) }}
+                onClick={() => { setSucesso(null); setForm({ nome: '', email: '', papel: 'cliente', empresa: '', telefone: '' }); setObrasSelecionadas([]) }}
                 className="btn-secondary"
               >
                 Criar outro
@@ -143,21 +145,6 @@ export default function NovoUsuarioPage() {
               <div className="sm:col-span-2">
                 <label className="label">E-mail *</label>
                 <input type="email" required value={form.email} onChange={e => set('email', e.target.value)} className="input" placeholder="usuario@email.com" />
-              </div>
-              <div className="sm:col-span-2 relative">
-                <label className="label">Senha inicial *</label>
-                <input
-                  type={mostrarSenha ? 'text' : 'password'}
-                  required
-                  value={form.senha}
-                  onChange={e => set('senha', e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  className="input pr-11"
-                />
-                <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-9 text-lead-400 hover:text-lead-600">
-                  {mostrarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-                <p className="text-xs text-lead-400 mt-1">Compartilhe com o usuário. Ele poderá alterar depois em "Esqueci minha senha".</p>
               </div>
               <div>
                 <label className="label">Empresa</label>
