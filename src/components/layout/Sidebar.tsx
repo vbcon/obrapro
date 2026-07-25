@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useSidebar } from '@/lib/context/SidebarContext'
-import VbconLogo from '@/components/ui/VbconLogo'
 import type { Papel } from '@/lib/types/roles'
 import {
   HardHat, CalendarDays, ShoppingCart,
@@ -79,14 +78,15 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
       >
 
         {/* ── Logo ── */}
-        <div className="flex items-center justify-between px-5 shrink-0"
-          style={{ height: 'var(--header-height)', borderBottom: '1px solid #f3f4f6' }}>
+        <div className="relative flex flex-col items-center justify-center shrink-0 py-5"
+          style={{ borderBottom: '1px solid #f3f4f6' }}>
 
-          <VbconLogo variant="full" size={36} />
-
-          <button onClick={close} className="md:hidden p-1.5 rounded-lg text-lead-400 hover:text-lead-700 hover:bg-lead-100 transition-colors">
+          <button onClick={close} className="md:hidden absolute top-2 right-2 p-1.5 rounded-lg text-lead-400 hover:text-lead-700 hover:bg-lead-100 transition-colors">
             <X className="w-4 h-4" />
           </button>
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="VBCON Engenharia" style={{ width: 148, height: 148, objectFit: 'contain' }} />
         </div>
 
         {/* ── Navigation ── */}
