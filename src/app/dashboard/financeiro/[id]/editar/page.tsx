@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, Save, AlertCircle, Trash2, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Save, AlertCircle, Trash2, Copy, Check, Paperclip, X, File, ExternalLink } from 'lucide-react'
 
 const TIPOS = [
   { value: 'materiais',             label: 'Materiais'                },
@@ -31,11 +31,16 @@ const DADOS_PLACEHOLDER: Record<string, string> = {
 export default function EditarLancamentoPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const supabase = createClient()
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando]     = useState(false)
   const [erro, setErro]             = useState('')
   const [copiado, setCopiado]       = useState(false)
   const [obras, setObras]           = useState<{ id: string; nome: string; codigo: string }[]>([])
+  const [anexos, setAnexos]         = useState<any[]>([])
+  const [uploadingAnexo, setUploadingAnexo] = useState(false)
+  const [obraId, setObraId]         = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
     obra_id: '', tipo: 'materiais', descricao: '', valor: '',
@@ -44,11 +49,11 @@ export default function EditarLancamentoPage() {
   })
 
   useEffect(() => {
-    const supabase = createClient()
     Promise.all([
       supabase.from('financeiro').select('*').eq('id', id).single(),
       supabase.from('obras').select('id, nome, codigo').order('nome'),
-    ]).then(([{ data }, { data: obrasData }]) => {
+      supabase.from('anexos_financeiro').select('*').eq('financeiro_id', id).order('criado_em', { ascending: false }),
+    ]).then(([{ data }, { data: obrasData }, { data: anexosData }]) => {
       if (!data) { router.push('/dashboard/financeiro'); return }
       setForm({
         obra_id:          data.obra_id,
@@ -63,7 +68,9 @@ export default function EditarLancamentoPage() {
         forma_pagamento:  data.forma_pagamento  || '',
         dados_pagamento:  data.dados_pagamento  || '',
       })
+      setObraId(data.obra_id)
       setObras(obrasData || [])
+      setAnexos(anexosData || [])
       setCarregando(false)
     })
   }, [id, router])
@@ -82,12 +89,47 @@ export default function EditarLancamentoPage() {
     setTimeout(() => setCopiado(false), 2000)
   }
 
+  async function uploadAnexo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAnexo(true)
+    const path = `${obraId}/financeiro/${id}/${Date.now()}-${file.name}`
+    const { error: upErr } = await supabase.storage
+      .from('documentos').upload(path, file, { cacheControl: '3600', upsert: false })
+    if (!upErr) {
+      const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
+      const { data: novo } = await supabase.from('anexos_financeiro').insert({
+        financeiro_id: id,
+        obra_id:       obraId,
+        nome:          file.name,
+        url:           urlData?.publicUrl,
+        tamanho:       file.size,
+      }).select().single()
+      if (novo) setAnexos(prev => [novo, ...prev])
+    }
+    if (fileRef.current) fileRef.current.value = ''
+    setUploadingAnexo(false)
+  }
+
+  async function deletarAnexo(anexoId: string) {
+    if (!confirm('Excluir este anexo?')) return
+    await supabase.from('anexos_financeiro').delete().eq('id', anexoId)
+    setAnexos(prev => prev.filter(a => a.id !== anexoId))
+  }
+
+  function fmtTamanho(bytes: number) {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
     if (!form.valor || parseFloat(form.valor) <= 0) { setErro('Informe um valor válido.'); return }
     setSalvando(true)
-    const { error } = await createClient().from('financeiro').update({
+    const { error } = await supabase.from('financeiro').update({
       obra_id:          form.obra_id,
       tipo:             form.tipo,
       descricao:        form.descricao,
@@ -107,7 +149,7 @@ export default function EditarLancamentoPage() {
 
   async function handleDelete() {
     if (!confirm('Excluir este lançamento?')) return
-    await createClient().from('financeiro').delete().eq('id', id)
+    await supabase.from('financeiro').delete().eq('id', id)
     router.push('/dashboard/financeiro')
     router.refresh()
   }
@@ -140,21 +182,18 @@ export default function EditarLancamentoPage() {
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-lead-900">Dados do Lançamento</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
               <div className="sm:col-span-2">
                 <label className="label">Obra</label>
                 <select value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className="select">
                   {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
                 </select>
               </div>
-
               <div>
                 <label className="label">Tipo</label>
                 <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="select">
                   {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
-
               <div>
                 <label className="label">Status</label>
                 <select value={form.status} onChange={e => set('status', e.target.value)} className="select">
@@ -164,33 +203,27 @@ export default function EditarLancamentoPage() {
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>
-
               <div className="sm:col-span-2">
                 <label className="label">Descrição</label>
                 <input type="text" required value={form.descricao} onChange={e => set('descricao', e.target.value)} className="input" />
               </div>
-
               <div>
                 <label className="label">Valor (R$)</label>
                 <input type="number" required step="0.01" min="0.01"
                   value={form.valor} onChange={e => set('valor', e.target.value)} className="input" />
               </div>
-
               <div>
                 <label className="label">Data referência</label>
                 <input type="date" value={form.data_referencia} onChange={e => set('data_referencia', e.target.value)} className="input" />
               </div>
-
               <div>
                 <label className="label">Data vencimento</label>
                 <input type="date" value={form.data_vencimento} onChange={e => set('data_vencimento', e.target.value)} className="input" />
               </div>
-
               <div>
                 <label className="label">Data pagamento</label>
                 <input type="date" value={form.data_pagamento} onChange={e => set('data_pagamento', e.target.value)} className="input" />
               </div>
-
               <div className="sm:col-span-2">
                 <label className="label">Observações</label>
                 <textarea rows={2} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} className="textarea" />
@@ -198,17 +231,15 @@ export default function EditarLancamentoPage() {
             </div>
           </div>
 
-          {/* Forma de pagamento */}
+          {/* Pagamento */}
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-lead-900">Pagamento</h2>
-
             <div>
               <label className="label">Forma de pagamento</label>
               <select value={form.forma_pagamento} onChange={e => set('forma_pagamento', e.target.value)} className="select">
                 {FORMAS_PAGAMENTO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </div>
-
             {form.forma_pagamento && (
               <div>
                 <label className="label">
@@ -216,33 +247,62 @@ export default function EditarLancamentoPage() {
                   <span className="label-hint">O cliente poderá copiar com um clique</span>
                 </label>
                 <div className="relative">
-                  <textarea
-                    rows={3}
-                    value={form.dados_pagamento}
+                  <textarea rows={3} value={form.dados_pagamento}
                     onChange={e => set('dados_pagamento', e.target.value)}
                     placeholder={DADOS_PLACEHOLDER[form.forma_pagamento] || 'Cole aqui os dados de pagamento...'}
-                    className="textarea pr-12"
-                  />
+                    className="textarea pr-12" />
                   {form.dados_pagamento && (
-                    <button
-                      type="button"
-                      onClick={copiarDados}
-                      title="Copiar"
+                    <button type="button" onClick={copiarDados} title="Copiar"
                       className="absolute top-2.5 right-2.5 p-1.5 rounded-lg transition-all"
-                      style={{ background: copiado ? '#ecfdf5' : '#f1f5f9' }}
-                    >
-                      {copiado
-                        ? <Check className="w-4 h-4 text-emerald-600" />
-                        : <Copy className="w-4 h-4 text-lead-400" />
-                      }
+                      style={{ background: copiado ? '#ecfdf5' : '#f1f5f9' }}>
+                      {copiado ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-lead-400" />}
                     </button>
                   )}
                 </div>
                 {form.dados_pagamento && (
-                  <p className="text-xs text-lead-400 mt-1.5">
-                    {copiado ? '✓ Copiado!' : 'Clique no ícone para copiar'}
-                  </p>
+                  <p className="text-xs text-lead-400 mt-1.5">{copiado ? '✓ Copiado!' : 'Clique no ícone para copiar'}</p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Anexos */}
+          <div className="card p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lead-900">Anexos</h2>
+                <p className="text-xs text-lead-400 mt-0.5">Notas fiscais, boletos e comprovantes</p>
+              </div>
+              <label className={`btn-ghost text-sm py-1.5 px-3 cursor-pointer ${uploadingAnexo ? 'opacity-60 pointer-events-none' : ''}`}>
+                <Paperclip className="w-3.5 h-3.5" />{uploadingAnexo ? 'Enviando...' : 'Anexar arquivo'}
+                <input ref={fileRef} type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                  className="sr-only" onChange={uploadAnexo} disabled={uploadingAnexo} />
+              </label>
+            </div>
+            {anexos.length === 0 ? (
+              <p className="text-sm text-lead-400 py-2">Nenhum anexo ainda.</p>
+            ) : (
+              <div className="space-y-2">
+                {anexos.map(a => (
+                  <div key={a.id} className="flex items-center gap-3 bg-lead-50 rounded-lg px-3 py-2.5 group">
+                    <File className="w-4 h-4 text-lead-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-lead-800 truncate">{a.nome}</p>
+                      {a.tamanho && <p className="text-xs text-lead-400">{fmtTamanho(a.tamanho)}</p>}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a href={a.url} target="_blank" rel="noopener noreferrer"
+                        className="p-1.5 rounded-md text-lead-400 hover:text-brand-600 hover:bg-brand-50 transition-all">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <button type="button" onClick={() => deletarAnexo(a.id)}
+                        className="p-1.5 rounded-md text-lead-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

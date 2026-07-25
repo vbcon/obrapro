@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, Save, AlertCircle, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Save, AlertCircle, Copy, Check, Paperclip, X, File } from 'lucide-react'
 
 const TIPOS = [
   { value: 'materiais',             label: 'Materiais'                },
@@ -34,6 +34,8 @@ export default function NovoLancamentoPage() {
   const [erro, setErro] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [obras, setObras] = useState<{ id: string; nome: string; codigo: string }[]>([])
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
     obra_id: '', tipo: 'materiais', descricao: '', valor: '',
@@ -61,6 +63,22 @@ export default function NovoLancamentoPage() {
     setTimeout(() => setCopiado(false), 2000)
   }
 
+  function addFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    setPendingFiles(prev => [...prev, ...files])
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  function removeFile(i: number) {
+    setPendingFiles(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function fmtTamanho(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
@@ -69,7 +87,7 @@ export default function NovoLancamentoPage() {
     setSalvando(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('financeiro').insert({
+    const { data: lanc, error } = await supabase.from('financeiro').insert({
       obra_id:          form.obra_id,
       tipo:             form.tipo,
       descricao:        form.descricao,
@@ -82,8 +100,26 @@ export default function NovoLancamentoPage() {
       forma_pagamento:  form.forma_pagamento  || null,
       dados_pagamento:  form.dados_pagamento  || null,
       criado_por:       user?.id,
-    })
+    }).select().single()
     if (error) { setErro('Erro ao salvar.'); setSalvando(false); return }
+
+    // Upload pending files
+    for (const file of pendingFiles) {
+      const path = `${form.obra_id}/financeiro/${lanc.id}/${Date.now()}-${file.name}`
+      const { error: upErr } = await supabase.storage
+        .from('documentos').upload(path, file, { cacheControl: '3600', upsert: false })
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
+        await supabase.from('anexos_financeiro').insert({
+          financeiro_id: lanc.id,
+          obra_id:       form.obra_id,
+          nome:          file.name,
+          url:           urlData?.publicUrl,
+          tamanho:       file.size,
+        })
+      }
+    }
+
     router.push('/dashboard/financeiro')
     router.refresh()
   }
@@ -174,14 +210,12 @@ export default function NovoLancamentoPage() {
           {/* Forma de pagamento */}
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-lead-900">Pagamento</h2>
-
             <div>
               <label className="label">Forma de pagamento</label>
               <select value={form.forma_pagamento} onChange={e => set('forma_pagamento', e.target.value)} className="select">
                 {FORMAS_PAGAMENTO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </div>
-
             {form.forma_pagamento && (
               <div>
                 <label className="label">
@@ -189,33 +223,56 @@ export default function NovoLancamentoPage() {
                   <span className="label-hint">O cliente poderá copiar com um clique</span>
                 </label>
                 <div className="relative">
-                  <textarea
-                    rows={3}
-                    value={form.dados_pagamento}
+                  <textarea rows={3} value={form.dados_pagamento}
                     onChange={e => set('dados_pagamento', e.target.value)}
                     placeholder={DADOS_PLACEHOLDER[form.forma_pagamento] || 'Cole aqui os dados de pagamento...'}
-                    className="textarea pr-12"
-                  />
+                    className="textarea pr-12" />
                   {form.dados_pagamento && (
-                    <button
-                      type="button"
-                      onClick={copiarDados}
-                      title="Copiar"
+                    <button type="button" onClick={copiarDados} title="Copiar"
                       className="absolute top-2.5 right-2.5 p-1.5 rounded-lg transition-all"
-                      style={{ background: copiado ? '#ecfdf5' : '#f1f5f9' }}
-                    >
-                      {copiado
-                        ? <Check className="w-4 h-4 text-emerald-600" />
-                        : <Copy className="w-4 h-4 text-lead-400" />
-                      }
+                      style={{ background: copiado ? '#ecfdf5' : '#f1f5f9' }}>
+                      {copiado ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-lead-400" />}
                     </button>
                   )}
                 </div>
                 {form.dados_pagamento && (
-                  <p className="text-xs text-lead-400 mt-1.5">
-                    {copiado ? '✓ Copiado!' : 'Clique no ícone para copiar'}
-                  </p>
+                  <p className="text-xs text-lead-400 mt-1.5">{copiado ? '✓ Copiado!' : 'Clique no ícone para copiar'}</p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Anexos */}
+          <div className="card p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lead-900">Anexos</h2>
+                <p className="text-xs text-lead-400 mt-0.5">Notas fiscais, boletos e comprovantes</p>
+              </div>
+              <label className="btn-ghost text-sm py-1.5 px-3 cursor-pointer">
+                <Paperclip className="w-3.5 h-3.5" />Anexar arquivo
+                <input ref={fileRef} type="file" multiple
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                  className="sr-only" onChange={addFiles} />
+              </label>
+            </div>
+            {pendingFiles.length === 0 ? (
+              <p className="text-sm text-lead-400 py-2">Nenhum arquivo selecionado.</p>
+            ) : (
+              <div className="space-y-2">
+                {pendingFiles.map((file, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-lead-50 rounded-lg px-3 py-2.5">
+                    <File className="w-4 h-4 text-lead-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-lead-800 truncate">{file.name}</p>
+                      <p className="text-xs text-lead-400">{fmtTamanho(file.size)}</p>
+                    </div>
+                    <button type="button" onClick={() => removeFile(i)}
+                      className="p-1 text-lead-300 hover:text-red-500 transition-colors shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

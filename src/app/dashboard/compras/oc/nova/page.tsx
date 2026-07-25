@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, Save, AlertCircle, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, AlertCircle, Plus, Trash2, Paperclip, X, File } from 'lucide-react'
 
 interface Item { descricao: string; unidade: string; quantidade: string; valor_unitario: string }
 
@@ -14,6 +14,8 @@ export default function NovaOCDiretaPage() {
   const [obras, setObras] = useState<{ id: string; nome: string; codigo: string }[]>([])
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
     obra_id: '',
@@ -48,6 +50,22 @@ export default function NovaOCDiretaPage() {
     setItens(prev => prev.filter((_, idx) => idx !== i))
   }
 
+  function addFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    setPendingFiles(prev => [...prev, ...files])
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  function removeFile(i: number) {
+    setPendingFiles(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function fmtTamanho(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
   const total = itens.reduce((acc, item) =>
     acc + (parseFloat(item.quantidade) || 0) * (parseFloat(item.valor_unitario) || 0), 0)
 
@@ -56,8 +74,8 @@ export default function NovaOCDiretaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
-    if (!form.obra_id)          { setErro('Selecione uma obra.'); return }
-    if (!form.fornecedor_nome)  { setErro('Informe o fornecedor.'); return }
+    if (!form.obra_id)         { setErro('Selecione uma obra.'); return }
+    if (!form.fornecedor_nome) { setErro('Informe o fornecedor.'); return }
     const itensFilled = itens.filter(i => i.descricao && parseFloat(i.quantidade) > 0 && parseFloat(i.valor_unitario) > 0)
     if (itensFilled.length === 0) { setErro('Adicione pelo menos um item com valor.'); return }
 
@@ -94,6 +112,24 @@ export default function NovaOCDiretaPage() {
     }).select().single()
 
     if (error) { setErro(`Erro: ${error.message}`); setSalvando(false); return }
+
+    // Upload pending files
+    for (const file of pendingFiles) {
+      const path = `${form.obra_id}/${oc.id}/anexos/${Date.now()}-${file.name}`
+      const { error: upErr } = await supabase.storage
+        .from('documentos').upload(path, file, { cacheControl: '3600', upsert: false })
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
+        await supabase.from('anexos_compra').insert({
+          compra_id: oc.id,
+          obra_id:   form.obra_id,
+          nome:      file.name,
+          url:       urlData?.publicUrl,
+          tamanho:   file.size,
+        })
+      }
+    }
+
     router.push(`/dashboard/compras/oc/${oc.id}`)
     router.refresh()
   }
@@ -163,13 +199,9 @@ export default function NovaOCDiretaPage() {
 
           {/* Cliente */}
           <div className="card p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="font-semibold text-lead-900">Aprovação do cliente</h2>
-                <p className="text-xs text-lead-400 mt-0.5">
-                  Após criar, você poderá enviar o link de aprovação via WhatsApp
-                </p>
-              </div>
+            <div>
+              <h2 className="font-semibold text-lead-900">Aprovação do cliente</h2>
+              <p className="text-xs text-lead-400 mt-0.5">Após criar, você poderá enviar o link de aprovação via WhatsApp</p>
             </div>
             <div>
               <label className="label">
@@ -242,11 +274,52 @@ export default function NovaOCDiretaPage() {
               className="textarea" />
           </div>
 
+          {/* Anexos */}
+          <div className="card p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lead-900">Anexos</h2>
+                <p className="text-xs text-lead-400 mt-0.5">Cotações, propostas e documentos do fornecedor</p>
+              </div>
+              <label className="btn-ghost text-sm py-1.5 px-3 cursor-pointer">
+                <Paperclip className="w-3.5 h-3.5" />Anexar arquivo
+                <input
+                  ref={fileRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
+                  className="sr-only"
+                  onChange={addFiles}
+                />
+              </label>
+            </div>
+
+            {pendingFiles.length === 0 ? (
+              <p className="text-sm text-lead-400 py-2">Nenhum arquivo selecionado.</p>
+            ) : (
+              <div className="space-y-2">
+                {pendingFiles.map((file, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-lead-50 rounded-lg px-3 py-2.5">
+                    <File className="w-4 h-4 text-lead-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-lead-800 truncate">{file.name}</p>
+                      <p className="text-xs text-lead-400">{fmtTamanho(file.size)}</p>
+                    </div>
+                    <button type="button" onClick={() => removeFile(i)}
+                      className="p-1 text-lead-300 hover:text-red-500 transition-colors shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3 justify-end">
             <Link href="/dashboard/compras" className="btn-secondary">Cancelar</Link>
             <button type="submit" disabled={salvando} className="btn-primary">
               {salvando
-                ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Gerando O.C...</>
+                ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{pendingFiles.length > 0 ? 'Salvando e enviando arquivos...' : 'Gerando O.C...'}</>
                 : <><Save className="w-4 h-4" />Gerar Ordem de Compra</>
               }
             </button>
