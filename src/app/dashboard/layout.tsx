@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/Sidebar'
 import ChatWidget from '@/components/ai/ChatWidget'
 import { UserProvider } from '@/lib/context/UserContext'
+import { SidebarProvider } from '@/lib/context/SidebarContext'
 import type { Papel } from '@/lib/types/roles'
 
 export default async function DashboardLayout({
@@ -32,19 +33,22 @@ export default async function DashboardLayout({
 
   return (
     <UserProvider initialProfile={initialProfile}>
-      <div className="min-h-screen bg-lead-50">
-        <Sidebar
-          nomeUsuario={perfil?.nome || user.email?.split('@')[0]}
-          emailUsuario={perfil?.email || user.email}
-          papel={(perfil?.papel as Papel) || 'admin'}
-        />
-        <div className="pl-64 min-h-screen flex flex-col">
-          <main className="flex-1">
-            {children}
-          </main>
+      <SidebarProvider>
+        <div className="min-h-screen bg-lead-50">
+          <Sidebar
+            nomeUsuario={perfil?.nome || user.email?.split('@')[0]}
+            emailUsuario={perfil?.email || user.email}
+            papel={(perfil?.papel as Papel) || 'admin'}
+          />
+          {/* Conteúdo principal — sem padding no mobile, com padding no desktop */}
+          <div className="md:pl-64 min-h-screen flex flex-col">
+            <main className="flex-1">
+              {children}
+            </main>
+          </div>
+          <ChatWidget />
         </div>
-        <ChatWidget />
-      </div>
+      </SidebarProvider>
     </UserProvider>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { Search, Menu } from 'lucide-react'
+import { useSidebar } from '@/lib/context/SidebarContext'
 
 interface HeaderProps {
   titulo: string
@@ -8,12 +9,24 @@ interface HeaderProps {
 }
 
 export default function Header({ titulo, subtitulo }: HeaderProps) {
+  const { open } = useSidebar()
+
   return (
     <header
-      className="sticky top-0 z-40 flex items-center justify-between gap-4 px-6 bg-white/95 backdrop-blur-md border-b border-lead-100"
+      className="sticky top-0 z-40 flex items-center gap-3 px-4 md:px-6 bg-white/95 backdrop-blur-md border-b border-lead-100"
       style={{ height: 'var(--header-height)' }}
     >
-      {/* Left: title */}
+      {/* Hamburger — mobile only */}
+      <button
+        type="button"
+        onClick={open}
+        className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg text-lead-500 hover:bg-lead-100 hover:text-lead-800 transition-colors shrink-0"
+        aria-label="Abrir menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Title */}
       <div className="min-w-0 flex-1">
         <h1 className="text-[15px] font-semibold text-lead-900 leading-snug truncate">
           {titulo}
@@ -23,9 +36,8 @@ export default function Header({ titulo, subtitulo }: HeaderProps) {
         )}
       </div>
 
-      {/* Right: actions */}
+      {/* Search — desktop only */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Command palette trigger */}
         <button
           type="button"
           className="hidden md:flex items-center gap-2 h-8 rounded-lg border border-lead-200 bg-lead-50/80

@@ -14,7 +14,8 @@
   }
 
   body {
-    @apply bg-lead-50 text-lead-900 font-sans;
+    @apply text-lead-900 font-sans;
+    background: #f0f2f5;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
@@ -135,14 +136,14 @@
   /* ── CARDS ───────────────────────────────────────────────── */
 
   .card {
-    @apply bg-white rounded-xl border border-lead-200/70
-           shadow-[0_1px_3px_0_rgba(0,0,0,0.05),0_1px_2px_-1px_rgba(0,0,0,0.04)];
+    @apply bg-white rounded-2xl border border-lead-200/60
+           shadow-[0_1px_4px_0_rgba(0,0,0,0.06),0_2px_8px_-2px_rgba(0,0,0,0.04)];
   }
 
   .card-hover {
     @apply card transition-all duration-200 cursor-pointer
-           hover:shadow-[0_4px_16px_0_rgba(0,0,0,0.08),0_2px_4px_-1px_rgba(0,0,0,0.04)]
-           hover:-translate-y-px hover:border-lead-300/70;
+           hover:shadow-[0_4px_20px_0_rgba(0,0,0,0.10),0_2px_6px_-1px_rgba(0,0,0,0.05)]
+           hover:-translate-y-0.5 hover:border-lead-300/60;
   }
 
   .card-stat {
@@ -283,11 +284,11 @@
   /* ── PAGE LAYOUT ─────────────────────────────────────────── */
 
   .page-body {
-    @apply p-6 space-y-5;
+    @apply p-4 md:p-6 space-y-4 md:space-y-5;
   }
 
   .page-body-wide {
-    @apply p-6 space-y-5 max-w-[1400px];
+    @apply p-4 md:p-6 space-y-4 md:space-y-5 max-w-[1400px];
   }
 
   /* ── DIVIDER ─────────────────────────────────────────────── */
