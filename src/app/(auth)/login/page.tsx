@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import VbconLogo from '@/components/ui/VbconLogo'
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
@@ -52,7 +51,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="flex justify-center mb-8 lg:hidden">
-            <VbconLogo variant="full" size={56} />
+            <Image src="/logo.png" alt="VBCON Engenharia" width={180} height={180} className="object-contain" priority />
           </div>
 
           {/* Form card */}
