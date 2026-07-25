@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, UserPlus, AlertCircle, CheckCircle2, Mail } from 'lucide-react'
+import { ArrowLeft, UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff, Copy, Check } from 'lucide-react'
 import { PAPEL_LABELS, type Papel } from '@/lib/types/roles'
 
 export default function NovoUsuarioPage() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
-  const [sucesso, setSucesso] = useState<{ nome: string; email: string } | null>(null)
+  const [sucesso, setSucesso] = useState<{ nome: string; email: string; senha: string } | null>(null)
   const [obras, setObras] = useState<{ id: string; nome: string; codigo: string }[]>([])
-  const [form, setForm] = useState({ nome: '', email: '', papel: 'cliente' as Papel, empresa: '', telefone: '' })
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+  const [form, setForm] = useState({ nome: '', email: '', senha: '', papel: 'cliente' as Papel })
   const [obrasSelecionadas, setObrasSelecionadas] = useState<string[]>([])
 
   useEffect(() => {
@@ -25,11 +27,18 @@ export default function NovoUsuarioPage() {
     setObrasSelecionadas(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
+  function copiarSenha(s: string) {
+    navigator.clipboard.writeText(s)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2500)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
 
-    if (!form.nome || !form.email) { setErro('Preencha nome e e-mail.'); return }
+    if (!form.nome || !form.email || !form.senha) { setErro('Preencha nome, e-mail e senha.'); return }
+    if (form.senha.length < 6) { setErro('Senha deve ter pelo menos 6 caracteres.'); return }
     if (form.papel !== 'admin' && obrasSelecionadas.length === 0) {
       setErro('Selecione pelo menos uma obra para este usuário.'); return
     }
@@ -41,6 +50,7 @@ export default function NovoUsuarioPage() {
       body: JSON.stringify({
         nome: form.nome,
         email: form.email,
+        senha: form.senha,
         papel: form.papel,
         obra_ids: obrasSelecionadas,
       }),
@@ -52,7 +62,7 @@ export default function NovoUsuarioPage() {
       return
     }
 
-    setSucesso({ nome: form.nome, email: form.email })
+    setSucesso({ nome: form.nome, email: form.email, senha: form.senha })
     setSalvando(false)
   }
 
@@ -66,20 +76,38 @@ export default function NovoUsuarioPage() {
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-lead-900">Convite enviado!</h2>
-              <p className="text-sm text-lead-500 mt-2">
-                <strong>{sucesso.nome}</strong> receberá um e-mail em <strong>{sucesso.email}</strong> com um link para definir sua senha e acessar o sistema.
-              </p>
+              <h2 className="text-xl font-bold text-lead-900">Usuário criado!</h2>
+              <p className="text-sm text-lead-500 mt-1">Passe as credenciais abaixo para <strong>{sucesso.nome}</strong>.</p>
             </div>
-            <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3 text-left">
-              <Mail className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-              <p className="text-sm text-blue-700">
-                O usuário deve clicar no link do e-mail para definir sua própria senha. O link expira em 24 horas.
-              </p>
+
+            <div className="w-full bg-lead-50 border border-lead-200 rounded-xl p-5 text-left space-y-3">
+              <div>
+                <p className="text-xs text-lead-400 mb-0.5">E-mail de acesso</p>
+                <p className="font-mono text-sm font-semibold text-lead-900">{sucesso.email}</p>
+              </div>
+              <div className="border-t border-lead-100" />
+              <div>
+                <p className="text-xs text-lead-400 mb-1">Senha</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-sm font-semibold text-lead-900 flex-1">{sucesso.senha}</p>
+                  <button
+                    onClick={() => copiarSenha(sucesso.senha)}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+                    style={{ background: copiado ? '#d1fae5' : '#f3f4f6', color: copiado ? '#065f46' : '#374151' }}
+                  >
+                    {copiado ? <><Check className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-3 mt-2">
+
+            <p className="text-xs text-lead-400">
+              O usuário pode alterar a senha depois em "Esqueci minha senha".
+            </p>
+
+            <div className="flex gap-3">
               <button
-                onClick={() => { setSucesso(null); setForm({ nome: '', email: '', papel: 'cliente', empresa: '', telefone: '' }); setObrasSelecionadas([]) }}
+                onClick={() => { setSucesso(null); setCopiado(false); setForm({ nome: '', email: '', senha: '', papel: 'cliente' }); setObrasSelecionadas([]) }}
                 className="btn-secondary"
               >
                 Criar outro
@@ -146,13 +174,19 @@ export default function NovoUsuarioPage() {
                 <label className="label">E-mail *</label>
                 <input type="email" required value={form.email} onChange={e => set('email', e.target.value)} className="input" placeholder="usuario@email.com" />
               </div>
-              <div>
-                <label className="label">Empresa</label>
-                <input type="text" value={form.empresa} onChange={e => set('empresa', e.target.value)} className="input" placeholder="Nome da empresa" />
-              </div>
-              <div>
-                <label className="label">Telefone</label>
-                <input type="text" value={form.telefone} onChange={e => set('telefone', e.target.value)} className="input" placeholder="(11) 9 9999-9999" />
+              <div className="sm:col-span-2 relative">
+                <label className="label">Senha *</label>
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  required
+                  value={form.senha}
+                  onChange={e => set('senha', e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  className="input pr-11"
+                />
+                <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-9 text-lead-400 hover:text-lead-600">
+                  {mostrarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
           </div>

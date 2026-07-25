@@ -2,6 +2,22 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+const ERROS_PT: Record<string, string> = {
+  'user already registered': 'Este e-mail já está cadastrado no sistema.',
+  'email already registered': 'Este e-mail já está cadastrado no sistema.',
+  'invalid email': 'Endereço de e-mail inválido.',
+  'password should be at least': 'A senha deve ter pelo menos 6 caracteres.',
+  'unable to validate email address': 'E-mail inválido ou domínio não aceito.',
+}
+
+function traduzirErro(msg: string): string {
+  const lower = msg.toLowerCase()
+  for (const [en, pt] of Object.entries(ERROS_PT)) {
+    if (lower.includes(en)) return pt
+  }
+  return msg
+}
+
 export async function POST(request: Request) {
   const serverSupabase = await createServerClient()
   const { data: { user } } = await serverSupabase.auth.getUser()
@@ -21,10 +37,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { nome, email, papel, obra_ids } = body
+  const { nome, email, senha, papel, obra_ids } = body
 
   if (!nome || !email || !papel) {
     return NextResponse.json({ error: 'Nome, e-mail e papel são obrigatórios.' }, { status: 400 })
+  }
+  if (!senha || senha.length < 6) {
+    return NextResponse.json({ error: 'Senha deve ter pelo menos 6 caracteres.' }, { status: 400 })
   }
 
   const adminSupabase = createClient(
@@ -40,20 +59,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este e-mail já está cadastrado no sistema.' }, { status: 400 })
   }
 
-  // Criar usuário e enviar e-mail de convite
-  const { data: invited, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(email, {
-    data: { nome },
+  // Criar usuário com senha definida e e-mail já confirmado
+  const { data: created, error: createError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+    user_metadata: { nome },
   })
 
-  if (inviteError || !invited?.user) {
-    return NextResponse.json({
-      error: inviteError?.message || 'Erro ao criar usuário. Verifique o e-mail e tente novamente.',
-    }, { status: 400 })
+  if (createError || !created?.user) {
+    const msg = traduzirErro(createError?.message || 'Erro ao criar usuário')
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
 
-  const newUserId = invited.user.id
+  const newUserId = created.user.id
 
-  // Definir papel correto (trigger cria com padrão 'admin')
+  // Criar perfil com papel correto
   const { error: perfErr } = await adminSupabase.from('perfis').upsert({
     id: newUserId,
     nome,
@@ -63,7 +84,7 @@ export async function POST(request: Request) {
 
   if (perfErr) {
     await adminSupabase.auth.admin.deleteUser(newUserId)
-    return NextResponse.json({ error: 'Erro ao configurar perfil. Tente novamente.' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao criar perfil. Tente novamente.' }, { status: 500 })
   }
 
   // Vincular obras
