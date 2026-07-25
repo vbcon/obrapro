@@ -9,7 +9,7 @@ import {
   ArrowLeft, Building2, MapPin, Calendar, Package, DollarSign,
   CheckCircle2, Copy, Check, Printer, Plus, FileText, Receipt,
   AlertCircle, ExternalLink, Banknote, Trash2, X, Upload, Sparkles, Loader2,
-  Send, Clock, MessageCircle,
+  Send, Clock, MessageCircle, Paperclip, File,
 } from 'lucide-react'
 
 function fmt(v: number) {
@@ -41,12 +41,16 @@ export default function OcDetailPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
 
-  const [oc, setOc]         = useState<any>(null)
+  const [oc, setOc]           = useState<any>(null)
   const [cotacao, setCotacao] = useState<any>(null)
-  const [docs, setDocs]     = useState<any[]>([])
-  const [carregando, setCarregando] = useState(true)
-  const [copiado, setCopiado]   = useState(false)
+  const [docs, setDocs]       = useState<any[]>([])
+  const [anexos, setAnexos]   = useState<any[]>([])
+  const [carregando, setCarregando]   = useState(true)
+  const [copiado, setCopiado]         = useState(false)
   const [copiadoLink, setCopiadoLink] = useState(false)
+  const [uploadingAnexo, setUploadingAnexo] = useState(false)
+  const [erroAnexo, setErroAnexo]           = useState('')
+  const anexoRef = useRef<HTMLInputElement>(null)
 
   // form novo doc
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -71,6 +75,9 @@ export default function OcDetailPage() {
       const { data: docsData } = await supabase.from('documentos_compra')
         .select('*').eq('compra_id', id).order('criado_em', { ascending: false })
       setDocs(docsData || [])
+      const { data: anexosData } = await supabase.from('anexos_compra')
+        .select('*').eq('compra_id', id).order('criado_em', { ascending: false })
+      setAnexos(anexosData || [])
       setCarregando(false)
     }
     load()
@@ -87,6 +94,48 @@ export default function OcDetailPage() {
     await navigator.clipboard.writeText(link)
     setCopiadoLink(true)
     setTimeout(() => setCopiadoLink(false), 2500)
+  }
+
+  async function uploadAnexo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAnexo(true)
+    setErroAnexo('')
+    const ext  = file.name.split('.').pop()
+    const path = `${oc.obra_id}/${id}/anexos/${Date.now()}-${file.name}`
+    const { error: upErr } = await supabase.storage
+      .from('documentos').upload(path, file, { cacheControl: '3600', upsert: false })
+    if (upErr) {
+      setErroAnexo('Erro ao enviar arquivo.')
+      setUploadingAnexo(false)
+      if (anexoRef.current) anexoRef.current.value = ''
+      return
+    }
+    const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
+    const { data: novoAnexo, error: dbErr } = await supabase.from('anexos_compra').insert({
+      compra_id: id,
+      obra_id:   oc.obra_id,
+      nome:      file.name,
+      url:       urlData?.publicUrl,
+      tamanho:   file.size,
+    }).select().single()
+    if (dbErr) { setErroAnexo('Erro ao salvar referência.'); setUploadingAnexo(false); return }
+    setAnexos(prev => [novoAnexo, ...prev])
+    if (anexoRef.current) anexoRef.current.value = ''
+    setUploadingAnexo(false)
+  }
+
+  async function deletarAnexo(anexo: any) {
+    if (!confirm(`Excluir "${anexo.nome}"?`)) return
+    await supabase.from('anexos_compra').delete().eq('id', anexo.id)
+    setAnexos(prev => prev.filter(a => a.id !== anexo.id))
+  }
+
+  function fmtTamanho(bytes: number) {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   function abrirWhatsApp() {
@@ -366,6 +415,79 @@ export default function OcDetailPage() {
             <p className="text-sm text-lead-700">{oc.observacoes}</p>
           </div>
         )}
+
+        {/* ── ANEXOS ────────────────────────────────────────────────── */}
+        <div className="card overflow-hidden">
+          <div className="section-header">
+            <div>
+              <p className="section-title">Anexos</p>
+              <p className="text-xs text-lead-400 mt-0.5">Cotações, propostas e outros documentos do fornecedor</p>
+            </div>
+            <label className={`btn-primary btn-sm cursor-pointer ${uploadingAnexo ? 'opacity-60 pointer-events-none' : ''}`}>
+              {uploadingAnexo
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Enviando...</>
+                : <><Upload className="w-3.5 h-3.5" />Anexar arquivo</>
+              }
+              <input
+                ref={anexoRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
+                className="sr-only"
+                onChange={uploadAnexo}
+                disabled={uploadingAnexo}
+              />
+            </label>
+          </div>
+
+          {erroAnexo && (
+            <div className="mx-6 mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-red-700 text-sm">{erroAnexo}</p>
+            </div>
+          )}
+
+          {anexos.length === 0 ? (
+            <div className="empty-state py-10">
+              <div className="empty-state-icon mx-auto">
+                <Paperclip className="w-5 h-5 text-lead-400" />
+              </div>
+              <p className="text-sm text-lead-500">Nenhum anexo ainda.</p>
+              <p className="text-xs text-lead-400 mt-1">Clique em "Anexar arquivo" para adicionar cotações e propostas.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-lead-100/80">
+              {anexos.map(a => (
+                <div key={a.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-lead-50/60 transition-colors group">
+                  <div className="w-8 h-8 rounded-lg bg-lead-100 flex items-center justify-center shrink-0">
+                    <File className="w-4 h-4 text-lead-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-lead-900 truncate">{a.nome}</p>
+                    {a.tamanho && (
+                      <p className="text-xs text-lead-400">{fmtTamanho(a.tamanho)}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <a
+                      href={a.url} target="_blank" rel="noopener noreferrer"
+                      className="p-1.5 rounded-md text-lead-400 hover:text-brand-600 hover:bg-brand-50 transition-all"
+                      title="Abrir"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      onClick={() => deletarAnexo(a)}
+                      className="p-1.5 rounded-md text-lead-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                      title="Excluir"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* ── APROVAÇÃO DO CLIENTE ──────────────────────────────────── */}
         <div className="card overflow-hidden">
