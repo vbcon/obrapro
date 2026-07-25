@@ -113,21 +113,26 @@ export default function NovaOCDiretaPage() {
 
     if (error) { setErro(`Erro: ${error.message}`); setSalvando(false); return }
 
-    // Upload pending files
-    for (const file of pendingFiles) {
-      const path = `${form.obra_id}/${oc.id}/anexos/${Date.now()}-${file.name}`
-      const { error: upErr } = await supabase.storage
-        .from('documentos').upload(path, file, { cacheControl: '3600', upsert: false })
-      if (!upErr) {
-        const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
-        await supabase.from('anexos_compra').insert({
-          compra_id: oc.id,
-          obra_id:   form.obra_id,
-          nome:      file.name,
-          url:       urlData?.publicUrl,
-          tamanho:   file.size,
-        })
-      }
+    // Upload em paralelo — erros individuais não bloqueiam o redirecionamento
+    if (pendingFiles.length > 0) {
+      await Promise.all(pendingFiles.map(async (file) => {
+        try {
+          const safeName = file.name.replace(/\s+/g, '_')
+          const path = `${form.obra_id}/${oc.id}/anexos/${Date.now()}-${safeName}`
+          const { error: upErr } = await supabase.storage
+            .from('documentos').upload(path, file, { cacheControl: '3600', upsert: false })
+          if (!upErr) {
+            const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
+            await supabase.from('anexos_compra').insert({
+              compra_id: oc.id,
+              obra_id:   form.obra_id,
+              nome:      file.name,
+              url:       urlData?.publicUrl,
+              tamanho:   file.size,
+            })
+          }
+        } catch { /* ignora erros individuais de upload */ }
+      }))
     }
 
     router.push(`/dashboard/compras/oc/${oc.id}`)

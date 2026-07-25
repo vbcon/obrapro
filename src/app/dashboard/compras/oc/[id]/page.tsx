@@ -63,11 +63,25 @@ export default function OcDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('compras')
-        .select('*, obras(nome, codigo, endereco, cidade, estado, cliente), solicitacoes_compra(titulo, itens, data_necessidade)')
+      // Busca OC sem JOIN de solicitacoes_compra (OCs diretas não têm solicitacao_id)
+      const { data, error } = await supabase.from('compras')
+        .select('*, obras(nome, codigo, endereco, cidade, estado, cliente)')
         .eq('id', id).single()
-      if (!data) { setCarregando(false); return }
-      setOc(data)
+      if (error || !data) { setCarregando(false); return }
+
+      // Busca solicitação separadamente se existir
+      let ocData: any = { ...data, solicitacoes_compra: null }
+      if (data.solicitacao_id) {
+        const { data: solData } = await supabase
+          .from('solicitacoes_compra')
+          .select('titulo, itens, data_necessidade')
+          .eq('id', data.solicitacao_id)
+          .single()
+        ocData.solicitacoes_compra = solData
+      }
+
+      setOc(ocData)
+
       if (data.cotacao_id) {
         const { data: cotData } = await supabase.from('cotacoes').select('*').eq('id', data.cotacao_id).single()
         setCotacao(cotData)
