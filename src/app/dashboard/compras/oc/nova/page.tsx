@@ -25,6 +25,19 @@ export default function NovaOCDiretaPage() {
     condicao_pagamento: '',
     telefone_cliente: '',
     observacoes: '',
+    metodo_pagamento: '' as '' | 'pix' | 'ted' | 'boleto' | 'dinheiro',
+    // PIX
+    pix_tipo_chave: 'cnpj' as string,
+    pix_chave: '',
+    pix_nome: '',
+    pix_banco: '',
+    // TED
+    ted_banco: '',
+    ted_agencia: '',
+    ted_conta: '',
+    ted_tipo_conta: 'corrente' as string,
+    ted_cnpj_cpf: '',
+    ted_nome: '',
   })
 
   const [itens, setItens] = useState<Item[]>([
@@ -95,6 +108,26 @@ export default function NovaOCDiretaPage() {
       valor_total: parseFloat(i.quantidade) * parseFloat(i.valor_unitario),
     }))
 
+    // Monta dados_pagamento conforme método
+    let dados_pagamento: Record<string, string> | null = null
+    if (form.metodo_pagamento === 'pix') {
+      dados_pagamento = {
+        tipo_chave: form.pix_tipo_chave,
+        chave:      form.pix_chave,
+        nome:       form.pix_nome,
+        banco:      form.pix_banco,
+      }
+    } else if (form.metodo_pagamento === 'ted') {
+      dados_pagamento = {
+        banco:      form.ted_banco,
+        agencia:    form.ted_agencia,
+        conta:      form.ted_conta,
+        tipo_conta: form.ted_tipo_conta,
+        cnpj_cpf:   form.ted_cnpj_cpf,
+        nome:       form.ted_nome,
+      }
+    }
+
     const { data: oc, error } = await supabase.from('compras').insert({
       obra_id:            form.obra_id,
       tipo:               'direta',
@@ -109,6 +142,8 @@ export default function NovaOCDiretaPage() {
       itens:              itensPayload,
       desconto:           0,
       token_aprovacao:    token,
+      metodo_pagamento:   form.metodo_pagamento   || null,
+      dados_pagamento:    dados_pagamento,
     }).select().single()
 
     if (error) { setErro(`Erro: ${error.message}`); setSalvando(false); return }
@@ -269,6 +304,120 @@ export default function NovaOCDiretaPage() {
                 <p className="text-2xl font-bold text-brand-600">{fmt(total)}</p>
               </div>
             </div>
+          </div>
+
+          {/* Forma de pagamento */}
+          <div className="card p-6 space-y-4">
+            <div>
+              <h2 className="font-semibold text-lead-900">Dados para pagamento</h2>
+              <p className="text-xs text-lead-400 mt-0.5">Exibido para o cliente após a aprovação (exceto boleto)</p>
+            </div>
+
+            <div>
+              <label className="label">Forma de pagamento</label>
+              <select
+                value={form.metodo_pagamento}
+                onChange={e => set('metodo_pagamento', e.target.value)}
+                className="select"
+              >
+                <option value="">Não informar</option>
+                <option value="pix">PIX</option>
+                <option value="ted">Transferência (TED)</option>
+                <option value="boleto">Boleto</option>
+                <option value="dinheiro">Dinheiro / Espécie</option>
+              </select>
+            </div>
+
+            {/* PIX */}
+            {form.metodo_pagamento === 'pix' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-lead-100">
+                <div>
+                  <label className="label">Tipo de chave PIX</label>
+                  <select value={form.pix_tipo_chave} onChange={e => set('pix_tipo_chave', e.target.value)} className="select">
+                    <option value="cnpj">CNPJ</option>
+                    <option value="cpf">CPF</option>
+                    <option value="email">E-mail</option>
+                    <option value="telefone">Telefone</option>
+                    <option value="aleatoria">Chave aleatória</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Chave PIX *</label>
+                  <input type="text" required={form.metodo_pagamento === 'pix'} value={form.pix_chave}
+                    onChange={e => set('pix_chave', e.target.value)}
+                    placeholder="Ex: 12.345.678/0001-99" className="input" />
+                </div>
+                <div>
+                  <label className="label">Nome do favorecido</label>
+                  <input type="text" value={form.pix_nome}
+                    onChange={e => set('pix_nome', e.target.value)}
+                    placeholder="VBCON Engenharia LTDA" className="input" />
+                </div>
+                <div>
+                  <label className="label">Banco</label>
+                  <input type="text" value={form.pix_banco}
+                    onChange={e => set('pix_banco', e.target.value)}
+                    placeholder="Ex: Nubank, Itaú..." className="input" />
+                </div>
+              </div>
+            )}
+
+            {/* TED */}
+            {form.metodo_pagamento === 'ted' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-lead-100">
+                <div>
+                  <label className="label">Banco *</label>
+                  <input type="text" required={form.metodo_pagamento === 'ted'} value={form.ted_banco}
+                    onChange={e => set('ted_banco', e.target.value)}
+                    placeholder="Ex: Itaú, Bradesco..." className="input" />
+                </div>
+                <div>
+                  <label className="label">Agência</label>
+                  <input type="text" value={form.ted_agencia}
+                    onChange={e => set('ted_agencia', e.target.value)}
+                    placeholder="0001" className="input" />
+                </div>
+                <div>
+                  <label className="label">Conta</label>
+                  <input type="text" value={form.ted_conta}
+                    onChange={e => set('ted_conta', e.target.value)}
+                    placeholder="12345-6" className="input" />
+                </div>
+                <div>
+                  <label className="label">Tipo de conta</label>
+                  <select value={form.ted_tipo_conta} onChange={e => set('ted_tipo_conta', e.target.value)} className="select">
+                    <option value="corrente">Corrente</option>
+                    <option value="poupanca">Poupança</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">CNPJ / CPF</label>
+                  <input type="text" value={form.ted_cnpj_cpf}
+                    onChange={e => set('ted_cnpj_cpf', e.target.value)}
+                    placeholder="12.345.678/0001-99" className="input" />
+                </div>
+                <div>
+                  <label className="label">Nome do favorecido</label>
+                  <input type="text" value={form.ted_nome}
+                    onChange={e => set('ted_nome', e.target.value)}
+                    placeholder="VBCON Engenharia LTDA" className="input" />
+                </div>
+              </div>
+            )}
+
+            {/* Boleto */}
+            {form.metodo_pagamento === 'boleto' && (
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-700">
+                O boleto será enviado separadamente ao cliente após a aprovação.
+              </div>
+            )}
+
+            {/* Dinheiro */}
+            {form.metodo_pagamento === 'dinheiro' && (
+              <div className="rounded-lg bg-lead-50 border border-lead-200 p-4 text-sm text-lead-600">
+                O cliente será orientado a efetuar o pagamento em espécie.
+              </div>
+            )}
           </div>
 
           {/* Observações */}

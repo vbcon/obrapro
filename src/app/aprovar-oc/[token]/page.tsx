@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle2, AlertCircle, Package, Building2, Loader2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Package, Building2, Loader2, Copy, Check } from 'lucide-react'
 
 function fmt(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -19,6 +19,13 @@ export default function AprovarOCPage() {
   const [aprovando, setAprovando] = useState(false)
   const [aprovado, setAprovado] = useState(false)
   const [erro, setErro] = useState('')
+  const [copiado, setCopiado] = useState('')
+
+  function copiar(texto: string, campo: string) {
+    navigator.clipboard.writeText(texto)
+    setCopiado(campo)
+    setTimeout(() => setCopiado(''), 2500)
+  }
 
   useEffect(() => {
     async function load() {
@@ -66,25 +73,106 @@ export default function AprovarOCPage() {
     </div>
   )
 
-  if (aprovado) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-green-50 to-white px-4 text-center">
-      <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
-        <CheckCircle2 className="w-10 h-10 text-green-600" />
+  if (aprovado) {
+    const metodo = oc?.metodo_pagamento
+    const dp = oc?.dados_pagamento || {}
+    const mostrarPagamento = metodo && metodo !== 'boleto'
+
+    const METODO_LABEL: Record<string, string> = {
+      pix:      'PIX',
+      ted:      'Transferência Bancária (TED)',
+      dinheiro: 'Dinheiro / Espécie',
+    }
+    const TIPO_CHAVE_LABEL: Record<string, string> = {
+      cnpj:      'CNPJ',
+      cpf:       'CPF',
+      email:     'E-mail',
+      telefone:  'Telefone',
+      aleatoria: 'Chave aleatória',
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white px-4 py-12">
+        <div className="max-w-sm mx-auto flex flex-col items-center text-center">
+
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-black text-lead-900 mb-2">Aprovado!</h1>
+          <p className="text-lead-600 mb-1">
+            A <strong>{oc?.numero_pedido}</strong> foi aprovada com sucesso.
+          </p>
+          {oc?.aprovado_cliente_nome && (
+            <p className="text-sm text-lead-400">Por {oc.aprovado_cliente_nome}</p>
+          )}
+          <div className="mt-5 w-full px-6 py-4 bg-white rounded-2xl border border-lead-100 shadow-sm">
+            <p className="text-xs text-lead-400">Valor total aprovado</p>
+            <p className="text-3xl font-black text-brand-600 mt-1">{fmt(oc?.valor_total || 0)}</p>
+          </div>
+
+          {/* Dados de pagamento */}
+          {mostrarPagamento && (
+            <div className="mt-5 w-full bg-white rounded-2xl border border-lead-100 shadow-sm overflow-hidden text-left">
+              <div className="px-5 py-3 border-b border-lead-100" style={{ background: '#fff8f0' }}>
+                <p className="font-bold text-lead-900 text-sm">💳 Como pagar</p>
+                <p className="text-xs text-lead-500 mt-0.5">{METODO_LABEL[metodo] || metodo}</p>
+              </div>
+
+              <div className="px-5 py-4 space-y-3">
+                {metodo === 'pix' && (
+                  <>
+                    {dp.nome && <InfoRow label="Favorecido" valor={dp.nome} />}
+                    {dp.banco && <InfoRow label="Banco" valor={dp.banco} />}
+                    {dp.chave && (
+                      <div>
+                        <p className="text-xs text-lead-400 mb-1">
+                          Chave PIX ({TIPO_CHAVE_LABEL[dp.tipo_chave] || dp.tipo_chave})
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="flex-1 font-mono text-sm font-semibold text-lead-900 break-all">{dp.chave}</p>
+                          <button
+                            onClick={() => copiar(dp.chave, 'pix')}
+                            className="shrink-0 flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+                            style={{ background: copiado === 'pix' ? '#d1fae5' : '#fff3e0', color: copiado === 'pix' ? '#065f46' : '#c2410c' }}
+                          >
+                            {copiado === 'pix' ? <><Check className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {metodo === 'ted' && (
+                  <>
+                    {dp.nome      && <InfoRow label="Favorecido"  valor={dp.nome} />}
+                    {dp.cnpj_cpf  && <InfoRow label="CNPJ / CPF" valor={dp.cnpj_cpf} copiavel onCopiar={() => copiar(dp.cnpj_cpf, 'cnpj')} copiado={copiado === 'cnpj'} />}
+                    {dp.banco     && <InfoRow label="Banco"       valor={dp.banco} />}
+                    {dp.agencia   && <InfoRow label="Agência"     valor={dp.agencia} />}
+                    {dp.conta     && (
+                      <InfoRow
+                        label={`Conta ${dp.tipo_conta === 'poupanca' ? 'Poupança' : 'Corrente'}`}
+                        valor={dp.conta}
+                        copiavel
+                        onCopiar={() => copiar(dp.conta, 'conta')}
+                        copiado={copiado === 'conta'}
+                      />
+                    )}
+                  </>
+                )}
+
+                {metodo === 'dinheiro' && (
+                  <p className="text-sm text-lead-600">O pagamento será efetuado em espécie conforme acordado.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-lead-300 mt-8">VBCON Engenharia</p>
+        </div>
       </div>
-      <h1 className="text-2xl font-black text-lead-900 mb-2">Aprovado!</h1>
-      <p className="text-lead-600 mb-1">
-        A <strong>{oc?.numero_pedido}</strong> foi aprovada com sucesso.
-      </p>
-      {oc?.aprovado_cliente_nome && (
-        <p className="text-sm text-lead-400">Por {oc.aprovado_cliente_nome}</p>
-      )}
-      <div className="mt-6 px-6 py-4 bg-white rounded-2xl border border-lead-100 shadow-sm">
-        <p className="text-xs text-lead-400">Valor total aprovado</p>
-        <p className="text-3xl font-black text-brand-600 mt-1">{fmt(oc?.valor_total || 0)}</p>
-      </div>
-      <p className="text-xs text-lead-400 mt-8">VBCON Engenharia · ObraPro</p>
-    </div>
-  )
+    )
+  }
 
   const obra = oc.obra
   const itens: any[] = Array.isArray(oc.itens) ? oc.itens : (oc.itens ? JSON.parse(oc.itens) : [])
@@ -228,6 +316,29 @@ export default function AprovarOCPage() {
 
         <p className="text-xs text-center text-lead-300 pb-4">VBCON Engenharia · ObraPro</p>
       </div>
+    </div>
+  )
+}
+
+function InfoRow({ label, valor, copiavel, onCopiar, copiado }: {
+  label: string; valor: string;
+  copiavel?: boolean; onCopiar?: () => void; copiado?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-xs text-lead-400">{label}</p>
+        <p className="text-sm font-semibold text-lead-900 break-all">{valor}</p>
+      </div>
+      {copiavel && (
+        <button
+          onClick={onCopiar}
+          className="shrink-0 flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+          style={{ background: copiado ? '#d1fae5' : '#fff3e0', color: copiado ? '#065f46' : '#c2410c' }}
+        >
+          {copiado ? <><Check className="w-3.5 h-3.5" />Copiado</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
+        </button>
+      )}
     </div>
   )
 }
