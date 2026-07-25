@@ -26,16 +26,16 @@ const NAV_SISTEMA = [
   { label: 'Configurações', href: '/dashboard/configuracoes',          icon: Settings, papeis: ['admin','cliente','arquiteto'], exact: true },
 ]
 
-const PAPEL_INFO: Record<Papel, { label: string; cls: string }> = {
-  admin:     { label: 'Admin',     cls: 'bg-orange-500/15 text-orange-300' },
-  cliente:   { label: 'Cliente',   cls: 'bg-sky-500/15 text-sky-300' },
-  arquiteto: { label: 'Arquiteto', cls: 'bg-violet-500/15 text-violet-300' },
+const PAPEL_INFO: Record<string, { label: string; bg: string; color: string }> = {
+  admin:     { label: 'Admin',     bg: '#fff3e0', color: '#e65100' },
+  cliente:   { label: 'Cliente',   bg: '#e3f2fd', color: '#1565c0' },
+  arquiteto: { label: 'Arquiteto', bg: '#f3e5f5', color: '#6a1b9a' },
 }
 
 interface SidebarProps {
   nomeUsuario?: string
   emailUsuario?: string
-  papel: Papel
+  papel: string
 }
 
 export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarProps) {
@@ -48,8 +48,7 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
   }
 
   async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await createClient().auth.signOut()
     router.push('/login')
     router.refresh()
   }
@@ -66,10 +65,7 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
     <>
       {/* Mobile backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
-          onClick={close}
-        />
+        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden" onClick={close} />
       )}
 
       <aside
@@ -78,114 +74,74 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
           'md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
-        style={{ background: '#0d1117', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ background: '#ffffff', borderRight: '1px solid #e5e7eb' }}
       >
 
         {/* ── Logo ── */}
         <div className="flex items-center justify-between px-5 shrink-0"
-          style={{ height: 'var(--header-height)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          style={{ height: 'var(--header-height)', borderBottom: '1px solid #f3f4f6' }}>
 
-          {/* VBCON logo mark */}
           <div className="flex items-center gap-2.5">
-            <div className="shrink-0 w-8 h-8">
-              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1.5" y="1.5" width="29" height="29" stroke="white" strokeWidth="2"/>
-                <polygon points="5,5 16,25 27,5 23.5,5 16,20 8.5,5" fill="#f97316"/>
-              </svg>
-            </div>
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="36" height="36" stroke="#1a1a1a" strokeWidth="2.5"/>
+              <polygon points="7,7 20,31 33,7 29,7 20,25 11,7" fill="#f97316"/>
+            </svg>
             <div className="leading-none">
-              <p className="text-white font-black text-[15px] tracking-wider leading-none">VBCON</p>
-              <p className="text-[9px] font-bold tracking-[0.18em] leading-none mt-1" style={{ color: '#f97316' }}>
-                ENGENHARIA
-              </p>
+              <p className="font-black tracking-wider leading-none text-lead-900 text-[15px]">VBCON</p>
+              <p className="font-bold tracking-[0.18em] leading-none mt-1 text-brand-500 text-[8px]">ENGENHARIA</p>
             </div>
           </div>
 
-          {/* Close button (mobile only) */}
-          <button
-            onClick={close}
-            className="md:hidden p-1.5 rounded-lg transition-colors"
-            style={{ color: 'rgba(255,255,255,0.4)' }}
-          >
+          <button onClick={close} className="md:hidden p-1.5 rounded-lg text-lead-400 hover:text-lead-700 hover:bg-lead-100 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* ── Navigation ── */}
-        <nav className="flex-1 px-2.5 py-4 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
 
           <NavSection label="Módulos">
             {navPrincipal.map(item => (
-              <NavItem
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-                active={isActive(item.href, item.exact)}
-                onClick={close}
-              />
+              <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label}
+                active={isActive(item.href, item.exact)} onClick={close} />
             ))}
           </NavSection>
 
           {navSistema.length > 0 && (
-            <NavSection label="Sistema" className="mt-2">
+            <NavSection label="Sistema" className="mt-3">
               {navSistema.map(item => (
-                <NavItem
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  label={item.label}
-                  active={isActive(item.href, item.exact)}
-                  onClick={close}
-                />
+                <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label}
+                  active={isActive(item.href, item.exact)} onClick={close} />
               ))}
             </NavSection>
           )}
 
         </nav>
 
-        {/* ── User profile ── */}
-        <div className="px-2.5 pb-3 pt-2 shrink-0"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center gap-3 px-2.5 py-2 rounded-lg group"
-            style={{ transition: 'background 0.15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+        {/* ── User ── */}
+        <div className="px-3 py-3 shrink-0" style={{ borderTop: '1px solid #f3f4f6' }}>
+          <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl group hover:bg-lead-50 transition-colors cursor-default">
 
-            <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 text-[11px] font-bold text-orange-300 select-none"
-              style={{ background: 'rgba(249,115,22,0.12)', boxShadow: '0 0 0 1px rgba(249,115,22,0.2)' }}>
+            <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 text-[11px] font-bold select-none"
+              style={{ background: '#fff3e0', color: '#e65100', boxShadow: '0 0 0 1.5px #fbd38d' }}>
               {initials}
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <p className="text-[13px] font-medium leading-none truncate"
-                  style={{ color: 'rgba(255,255,255,0.85)' }}>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[13px] font-semibold leading-none truncate text-lead-800">
                   {nomeUsuario || 'Usuário'}
                 </p>
-                <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none ${papelInfo.cls}`}>
+                <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none"
+                  style={{ background: papelInfo.bg, color: papelInfo.color }}>
                   {papelInfo.label}
                 </span>
               </div>
-              <p className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                {emailUsuario}
-              </p>
+              <p className="text-[11px] truncate text-lead-400 mt-0.5">{emailUsuario}</p>
             </div>
 
-            <button
-              onClick={handleLogout}
-              title="Sair"
-              className="p-1.5 rounded-md transition-all duration-150 opacity-0 group-hover:opacity-100"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.color = '#f87171'
-                e.currentTarget.style.background = 'rgba(239,68,68,0.1)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = 'rgba(255,255,255,0.3)'
-                e.currentTarget.style.background = 'transparent'
-              }}
-            >
+            <button onClick={handleLogout} title="Sair"
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 text-lead-400 hover:text-red-500 hover:bg-red-50 transition-all">
               <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -203,8 +159,7 @@ function NavSection({ label, children, className = '' }: {
 }) {
   return (
     <div className={className}>
-      <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
-        style={{ color: 'rgba(255,255,255,0.22)' }}>
+      <p className="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-lead-400">
         {label}
       </p>
       <div className="space-y-0.5">{children}</div>
@@ -216,40 +171,19 @@ function NavItem({ href, icon: Icon, label, active, onClick }: {
   href: string; icon: React.ElementType; label: string; active: boolean; onClick?: () => void
 }) {
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150 select-none"
+    <Link href={href} onClick={onClick}
+      className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[13.5px] transition-all duration-150 select-none"
       style={{
-        fontWeight: active ? 500 : 400,
-        color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.42)',
-        background: active ? 'rgba(249,115,22,0.12)' : 'transparent',
+        fontWeight: active ? 600 : 400,
+        color:      active ? '#c2410c' : '#6b7280',
+        background: active ? '#fff3e0' : 'transparent',
       }}
-      onMouseEnter={e => {
-        if (!active) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-          e.currentTarget.style.color = 'rgba(255,255,255,0.7)'
-        }
-      }}
-      onMouseLeave={e => {
-        if (!active) {
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.color = 'rgba(255,255,255,0.42)'
-        }
-      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.color = '#374151' } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6b7280' } }}
     >
-      <Icon
-        className="shrink-0"
-        style={{
-          width: 16, height: 16,
-          color: active ? '#fb923c' : 'rgba(255,255,255,0.3)',
-          transition: 'color 0.15s',
-        }}
-      />
+      <Icon className="shrink-0 w-4 h-4" style={{ color: active ? '#f97316' : '#9ca3af' }} />
       <span className="flex-1 leading-none">{label}</span>
-      {active && (
-        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#fb923c', opacity: 0.8 }} />
-      )}
+      {active && <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-brand-500" />}
     </Link>
   )
 }

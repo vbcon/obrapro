@@ -13,8 +13,8 @@ export default function Header({ titulo, subtitulo }: HeaderProps) {
 
   return (
     <header
-      className="sticky top-0 z-40 flex items-center gap-3 px-4 md:px-6 bg-white/95 backdrop-blur-md border-b border-lead-100"
-      style={{ height: 'var(--header-height)' }}
+      className="sticky top-0 z-40 flex items-center gap-3 px-4 md:px-6 border-b"
+      style={{ height: 'var(--header-height)', background: '#ffffff', borderColor: '#f3f4f6' }}
     >
       {/* Hamburger — mobile only */}
       <button
