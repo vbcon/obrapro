@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const hoje = new Date().toLocaleDateString('pt-BR')
 
-    const systemPrompt = `Você é o assistente de IA do ObraPro, sistema de gestão de obras da VBCON ENGENHARIA.
+    const systemPrompt = `Você é o assistente de IA da VBCON Engenharia, sistema de gestão de obras.
 Hoje é ${hoje}. Responda sempre em português, de forma direta e objetiva.
 Use os dados abaixo para responder perguntas. Quando fizer cálculos, mostre os valores em R$.
 Se não souber ou os dados não estiverem disponíveis, diga claramente.

@@ -314,7 +314,7 @@ export default function AprovarOCPage() {
           </form>
         )}
 
-        <p className="text-xs text-center text-lead-300 pb-4">VBCON Engenharia · ObraPro</p>
+        <p className="text-xs text-center text-lead-300 pb-4">VBCON Engenharia</p>
       </div>
     </div>
   )

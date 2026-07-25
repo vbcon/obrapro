@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'OBRAPRO - Gestão de Obras',
-  description: 'Sistema profissional de gestão de obras e projetos de construção',
+  title: 'VBCON Engenharia',
+  description: 'Gestão de obras com visibilidade total — qualidade, transparência e planejamento.',
   icons: {
     icon: '/favicon.ico',
   },

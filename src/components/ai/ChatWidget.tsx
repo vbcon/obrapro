@@ -98,7 +98,7 @@ export default function ChatWidget() {
               <Sparkles className="w-4 h-4 text-orange-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Assistente ObraPro</p>
+              <p className="text-sm font-semibold text-white">Assistente VBCON</p>
               <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Powered by Claude</p>
             </div>
             <div className="flex items-center gap-1">

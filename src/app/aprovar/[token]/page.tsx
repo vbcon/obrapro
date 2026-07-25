@@ -115,9 +115,9 @@ export default function AprovacaoClientePage() {
         <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
-              <span className="text-white font-black text-xs">OP</span>
+              <span className="text-white font-black text-xs">VB</span>
             </div>
-            <span className="font-bold text-lead-900">OBRAPRO</span>
+            <span className="font-bold text-lead-900">VBCON Engenharia</span>
           </div>
           {isAguardando && (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-700 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">
@@ -249,7 +249,7 @@ export default function AprovacaoClientePage() {
           </p>
         </div>
 
-        <p className="text-center text-xs text-lead-300 pb-4">Powered by OBRAPRO</p>
+        <p className="text-center text-xs text-lead-300 pb-4">VBCON Engenharia</p>
       </div>
     </div>
   )
