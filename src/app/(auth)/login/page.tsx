@@ -34,17 +34,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex" style={{ background: '#f0f2f5' }}>
 
       {/* Left panel — branding */}
-      <div className="hidden lg:flex flex-col justify-between w-[420px] shrink-0 p-12 bg-white border-r border-lead-100">
+      <div className="hidden lg:flex flex-col items-center justify-center w-[420px] shrink-0 px-12 py-16 bg-white border-r border-lead-100 relative">
 
-        <Image src="/logo.png" alt="VBCON Engenharia" width={180} height={180} className="object-contain" priority />
+        <Image src="/logo.png" alt="VBCON Engenharia" width={300} height={300} className="object-contain" priority />
 
-        <div>
-          <blockquote className="text-lead-600 text-lg leading-relaxed font-light">
-            "Gestão da sua obra com visibilidade total — qualidade, transparência e planejamento."
-          </blockquote>
-        </div>
+        <blockquote className="text-lead-500 text-base leading-relaxed font-light text-center mt-10">
+          "Gestão da sua obra com visibilidade total — qualidade, transparência e planejamento."
+        </blockquote>
 
-        <p className="text-lead-400 text-xs">© 2026 · Todos os direitos reservados</p>
+        <p className="absolute bottom-8 text-lead-400 text-xs">© 2026 · Todos os direitos reservados</p>
       </div>
 
       {/* Right panel — form */}
