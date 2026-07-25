@@ -3,26 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
-
-function VbconLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const s = size === 'sm' ? 28 : size === 'lg' ? 56 : 40
-  const textSm = size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'
-  const subSm  = size === 'sm' ? 'text-[7px]' : size === 'lg' ? 'text-[11px]' : 'text-[9px]'
-  return (
-    <div className="flex items-center gap-2.5">
-      <svg width={s} height={s} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="36" height="36" stroke="#1a1a1a" strokeWidth="2.5"/>
-        <polygon points="7,7 20,31 33,7 29,7 20,25 11,7" fill="#f97316"/>
-      </svg>
-      <div className="leading-none">
-        <p className={`font-black tracking-wider leading-none text-lead-900 ${textSm}`}>VBCON</p>
-        <p className={`font-bold tracking-[0.18em] leading-none mt-1 text-brand-500 ${subSm}`}>ENGENHARIA</p>
-      </div>
-    </div>
-  )
-}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -53,24 +36,12 @@ export default function LoginPage() {
       {/* Left panel — branding */}
       <div className="hidden lg:flex flex-col justify-between w-[420px] shrink-0 p-12 bg-white border-r border-lead-100">
 
-        <VbconLogo size="md" />
+        <Image src="/logo.png" alt="VBCON Engenharia" width={180} height={180} className="object-contain" priority />
 
         <div>
           <blockquote className="text-lead-600 text-lg leading-relaxed font-light">
-            "Gestão de obras com visibilidade total — do cronograma ao financeiro."
+            "Gestão da sua obra com visibilidade total — qualidade, transparência e planejamento."
           </blockquote>
-          <div className="mt-6 flex items-center gap-3">
-            <div className="w-10 h-10">
-              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="36" height="36" stroke="#1a1a1a" strokeWidth="2.5"/>
-                <polygon points="7,7 20,31 33,7 29,7 20,25 11,7" fill="#f97316"/>
-              </svg>
-            </div>
-            <div>
-              <p className="font-bold text-lead-900 text-sm">VBCON Engenharia</p>
-              <p className="text-xs text-lead-400">Plataforma de gestão de obras</p>
-            </div>
-          </div>
         </div>
 
         <p className="text-lead-400 text-xs">© 2026 · Todos os direitos reservados</p>
@@ -82,7 +53,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="flex justify-center mb-8 lg:hidden">
-            <VbconLogo size="lg" />
+            <Image src="/logo.png" alt="VBCON Engenharia" width={140} height={140} className="object-contain" priority />
           </div>
 
           {/* Form card */}

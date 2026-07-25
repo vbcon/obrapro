@@ -81,16 +81,8 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
         <div className="flex items-center justify-between px-5 shrink-0"
           style={{ height: 'var(--header-height)', borderBottom: '1px solid #f3f4f6' }}>
 
-          <div className="flex items-center gap-2.5">
-            <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="2" width="36" height="36" stroke="#1a1a1a" strokeWidth="2.5"/>
-              <polygon points="7,7 20,31 33,7 29,7 20,25 11,7" fill="#f97316"/>
-            </svg>
-            <div className="leading-none">
-              <p className="font-black tracking-wider leading-none text-lead-900 text-[15px]">VBCON</p>
-              <p className="font-bold tracking-[0.18em] leading-none mt-1 text-brand-500 text-[8px]">ENGENHARIA</p>
-            </div>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="VBCON Engenharia" className="h-9 w-auto object-contain" />
 
           <button onClick={close} className="md:hidden p-1.5 rounded-lg text-lead-400 hover:text-lead-700 hover:bg-lead-100 transition-colors">
             <X className="w-4 h-4" />
