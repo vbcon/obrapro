@@ -9,6 +9,7 @@ import {
   ArrowLeft, Building2, MapPin, Calendar, Package, DollarSign,
   CheckCircle2, Copy, Check, Printer, Plus, FileText, Receipt,
   AlertCircle, ExternalLink, Banknote, Trash2, X, Upload, Sparkles, Loader2,
+  Send, Clock, MessageCircle,
 } from 'lucide-react'
 
 function fmt(v: number) {
@@ -45,6 +46,9 @@ export default function OcDetailPage() {
   const [docs, setDocs]     = useState<any[]>([])
   const [carregando, setCarregando] = useState(true)
   const [copiado, setCopiado]   = useState(false)
+  const [copiadoLink, setCopiadoLink] = useState(false)
+  const [enviandoWA, setEnviandoWA] = useState(false)
+  const [msgWA, setMsgWA] = useState<{ ok: boolean; texto: string } | null>(null)
 
   // form novo doc
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -78,6 +82,40 @@ export default function OcDetailPage() {
     await navigator.clipboard.writeText(oc.numero_pedido)
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2000)
+  }
+
+  async function copiarLink() {
+    const link = `${window.location.origin}/aprovar-oc/${oc.token_aprovacao}`
+    await navigator.clipboard.writeText(link)
+    setCopiadoLink(true)
+    setTimeout(() => setCopiadoLink(false), 2500)
+  }
+
+  async function enviarWhatsApp() {
+    if (!oc.telefone_cliente) return
+    setEnviandoWA(true)
+    setMsgWA(null)
+    try {
+      const res = await fetch('/api/whatsapp/enviar-oc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telefone:    oc.telefone_cliente,
+          numero_oc:   oc.numero_pedido,
+          obra_nome:   oc.obras?.nome,
+          token:       oc.token_aprovacao,
+        }),
+      })
+      const data = await res.json()
+      setMsgWA(data.ok
+        ? { ok: true,  texto: 'Mensagem enviada com sucesso via WhatsApp!' }
+        : { ok: false, texto: data.erro || 'Erro ao enviar. Verifique as variáveis de ambiente do WhatsApp.' }
+      )
+    } catch {
+      setMsgWA({ ok: false, texto: 'Erro de conexão ao enviar WhatsApp.' })
+    } finally {
+      setEnviandoWA(false)
+    }
   }
 
   function setDoc(f: string, v: string) { setDocForm(p => ({ ...p, [f]: v })) }
@@ -184,6 +222,10 @@ export default function OcDetailPage() {
   const condicaoPagamento = oc.condicao_pagamento || cotacao?.condicao_pagamento
   const totalDocs = docs.reduce((s, d) => s + (Number(d.valor) || 0), 0)
   const totalPago = docs.filter(d => d.status === 'pago').reduce((s, d) => s + (Number(d.valor) || 0), 0)
+  const linkAprovacao = typeof window !== 'undefined'
+    ? `${window.location.origin}/aprovar-oc/${oc.token_aprovacao}`
+    : `/aprovar-oc/${oc.token_aprovacao}`
+  const jaAprovada = oc.status === 'aprovado'
 
   return (
     <>
@@ -196,9 +238,15 @@ export default function OcDetailPage() {
             <ArrowLeft className="w-4 h-4" />Voltar
           </Link>
           <div className="flex items-center gap-2">
-            <span className="badge bg-green-100 text-green-700">
-              <CheckCircle2 className="w-3 h-3" />Aprovada
-            </span>
+            {jaAprovada ? (
+              <span className="badge bg-green-100 text-green-700">
+                <CheckCircle2 className="w-3 h-3" />Aprovada
+              </span>
+            ) : (
+              <span className="badge bg-amber-100 text-amber-700">
+                <Clock className="w-3 h-3" />Aguardando aprovação
+              </span>
+            )}
             <button onClick={() => window.print()} className="btn-ghost py-1.5 px-3 text-sm">
               <Printer className="w-3.5 h-3.5" />Imprimir
             </button>
@@ -336,6 +384,106 @@ export default function OcDetailPage() {
             <p className="text-sm text-lead-700">{oc.observacoes}</p>
           </div>
         )}
+
+        {/* ── APROVAÇÃO DO CLIENTE ──────────────────────────────────── */}
+        <div className="card overflow-hidden">
+          <div className="section-header">
+            <div>
+              <p className="section-title">Aprovação do Cliente</p>
+              <p className="text-xs text-lead-400 mt-0.5">
+                {jaAprovada ? 'Esta O.C. foi aprovada pelo cliente' : 'Envie o link para o cliente aprovar via WhatsApp'}
+              </p>
+            </div>
+            {jaAprovada && (
+              <span className="badge bg-green-100 text-green-700 text-sm px-3 py-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />Aprovada
+              </span>
+            )}
+          </div>
+
+          <div className="px-6 py-5 space-y-4">
+            {/* Status aprovação */}
+            {jaAprovada ? (
+              <div className="rounded-xl bg-green-50 border border-green-200 p-4 space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <p className="font-semibold text-green-800">
+                    Aprovado por {oc.aprovado_cliente_nome || 'cliente'}
+                  </p>
+                </div>
+                {oc.aprovado_cliente_em && (
+                  <p className="text-sm text-green-600 ml-7">
+                    {new Date(oc.aprovado_cliente_em).toLocaleDateString('pt-BR', {
+                      day: '2-digit', month: 'long', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
+                <Clock className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-sm text-amber-700">Aguardando aprovação do cliente.</p>
+              </div>
+            )}
+
+            {/* Link de aprovação */}
+            <div>
+              <label className="label">Link de aprovação</label>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={`/aprovar-oc/${oc.token_aprovacao}`}
+                  className="input text-xs text-lead-500 font-mono bg-lead-50 flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={copiarLink}
+                  className="btn-ghost py-2 px-3 text-sm shrink-0"
+                  title="Copiar link completo"
+                >
+                  {copiadoLink ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              {copiadoLink && <p className="text-xs text-green-600 mt-1">Link copiado!</p>}
+            </div>
+
+            {/* Botão WhatsApp */}
+            {oc.telefone_cliente ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={enviarWhatsApp}
+                  disabled={enviandoWA}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
+                  style={{ background: enviandoWA ? '#6b7280' : '#25D366' }}
+                >
+                  {enviandoWA
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                    : <><MessageCircle className="w-4 h-4" />Enviar via WhatsApp — {oc.telefone_cliente}</>
+                  }
+                </button>
+                {msgWA && (
+                  <div className={`flex items-center gap-2 text-sm rounded-lg p-3 ${
+                    msgWA.ok
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}>
+                    {msgWA.ok
+                      ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      : <AlertCircle className="w-4 h-4 shrink-0" />
+                    }
+                    {msgWA.texto}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-lead-400">
+                Nenhum WhatsApp do cliente cadastrado nesta O.C.
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* ── DOCUMENTOS FINANCEIROS ──────────────────────────────── */}
         <div className="card overflow-hidden">

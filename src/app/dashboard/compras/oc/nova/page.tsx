@@ -21,6 +21,7 @@ export default function NovaOCDiretaPage() {
     fornecedor_nome: '',
     fornecedor_contato: '',
     condicao_pagamento: '',
+    telefone_cliente: '',
     observacoes: '',
   })
 
@@ -29,7 +30,8 @@ export default function NovaOCDiretaPage() {
   ])
 
   useEffect(() => {
-    createClient().from('obras').select('id, nome, codigo').order('nome').then(({ data }) => setObras(data || []))
+    createClient().from('obras').select('id, nome, codigo').order('nome')
+      .then(({ data }) => setObras(data || []))
   }, [])
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
@@ -46,49 +48,49 @@ export default function NovaOCDiretaPage() {
     setItens(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  const total = itens.reduce((acc, item) => {
-    return acc + (parseFloat(item.quantidade) || 0) * (parseFloat(item.valor_unitario) || 0)
-  }, 0)
+  const total = itens.reduce((acc, item) =>
+    acc + (parseFloat(item.quantidade) || 0) * (parseFloat(item.valor_unitario) || 0), 0)
 
   const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
-    if (!form.obra_id) { setErro('Selecione uma obra.'); return }
-    if (!form.fornecedor_nome) { setErro('Informe o fornecedor.'); return }
+    if (!form.obra_id)          { setErro('Selecione uma obra.'); return }
+    if (!form.fornecedor_nome)  { setErro('Informe o fornecedor.'); return }
     const itensFilled = itens.filter(i => i.descricao && parseFloat(i.quantidade) > 0 && parseFloat(i.valor_unitario) > 0)
     if (itensFilled.length === 0) { setErro('Adicione pelo menos um item com valor.'); return }
 
     setSalvando(true)
     const supabase = createClient()
 
-    // Gerar número da OC
     const ano = new Date().getFullYear()
     const { count } = await supabase.from('compras').select('id', { count: 'exact', head: true })
     const num = String((count || 0) + 1).padStart(4, '0')
     const numero = `OC-${ano}-${num}`
+    const token = crypto.randomUUID()
 
     const itensPayload = itensFilled.map(i => ({
-      descricao: i.descricao,
-      unidade: i.unidade,
+      descricao: i.descricao, unidade: i.unidade,
       quantidade: parseFloat(i.quantidade),
       valor_unitario: parseFloat(i.valor_unitario),
       valor_total: parseFloat(i.quantidade) * parseFloat(i.valor_unitario),
     }))
 
     const { data: oc, error } = await supabase.from('compras').insert({
-      obra_id: form.obra_id,
-      tipo: 'direta',
-      numero_pedido: numero,
-      status: 'aprovado',
-      data_pedido: form.data,
-      fornecedor_nome: form.fornecedor_nome,
+      obra_id:            form.obra_id,
+      tipo:               'direta',
+      numero_pedido:      numero,
+      status:             'aguardando_aprovacao',
+      data_pedido:        form.data,
+      fornecedor_nome:    form.fornecedor_nome,
       condicao_pagamento: form.condicao_pagamento || null,
-      observacoes: form.observacoes || null,
-      valor_total: total,
-      itens: itensPayload,
-      desconto: 0,
+      telefone_cliente:   form.telefone_cliente   || null,
+      observacoes:        form.observacoes        || null,
+      valor_total:        total,
+      itens:              itensPayload,
+      desconto:           0,
+      token_aprovacao:    token,
     }).select().single()
 
     if (error) { setErro(`Erro: ${error.message}`); setSalvando(false); return }
@@ -98,15 +100,16 @@ export default function NovaOCDiretaPage() {
 
   return (
     <>
-      <Header titulo="Nova O.C. Direta" subtitulo="Ordem de compra sem cotação" />
+      <Header titulo="Nova O.C. Direta" subtitulo="Ordem de compra para aprovação do cliente" />
 
-      <div className="p-6 max-w-3xl">
-        <Link href="/dashboard/compras" className="inline-flex items-center gap-2 text-sm text-lead-500 hover:text-lead-700 mb-6 transition-colors">
+      <div className="page-body max-w-3xl">
+        <Link href="/dashboard/compras"
+          className="inline-flex items-center gap-2 text-sm text-lead-500 hover:text-lead-700 mb-2 transition-colors">
           <ArrowLeft className="w-4 h-4" />Voltar
         </Link>
 
         {erro && (
-          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
             <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
             <p className="text-red-700 text-sm">{erro}</p>
           </div>
@@ -114,13 +117,13 @@ export default function NovaOCDiretaPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Cabeçalho */}
+          {/* Identificação */}
           <div className="card p-6 space-y-4">
             <h2 className="font-semibold text-lead-900">Identificação</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="label">Obra *</label>
-                <select required value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className="input">
+                <select required value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className="select">
                   <option value="">Selecione a obra...</option>
                   {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
                 </select>
@@ -138,16 +141,44 @@ export default function NovaOCDiretaPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="label">Nome do fornecedor *</label>
-                <input type="text" required value={form.fornecedor_nome} onChange={e => set('fornecedor_nome', e.target.value)} placeholder="Ex: Leroy Merlin, Depósito Central..." className="input" />
+                <input type="text" required value={form.fornecedor_nome}
+                  onChange={e => set('fornecedor_nome', e.target.value)}
+                  placeholder="Ex: Leroy Merlin, Depósito Central..."
+                  className="input" />
               </div>
               <div>
-                <label className="label">Contato / WhatsApp</label>
-                <input type="text" value={form.fornecedor_contato} onChange={e => set('fornecedor_contato', e.target.value)} placeholder="(11) 9 9999-9999" className="input" />
+                <label className="label">Contato / WhatsApp do fornecedor</label>
+                <input type="text" value={form.fornecedor_contato}
+                  onChange={e => set('fornecedor_contato', e.target.value)}
+                  placeholder="(11) 9 9999-9999" className="input" />
               </div>
               <div>
                 <label className="label">Condição de pagamento</label>
-                <input type="text" value={form.condicao_pagamento} onChange={e => set('condicao_pagamento', e.target.value)} placeholder="Ex: À vista, 30/60 dias..." className="input" />
+                <input type="text" value={form.condicao_pagamento}
+                  onChange={e => set('condicao_pagamento', e.target.value)}
+                  placeholder="Ex: À vista, 30/60 dias..." className="input" />
               </div>
+            </div>
+          </div>
+
+          {/* Cliente */}
+          <div className="card p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="font-semibold text-lead-900">Aprovação do cliente</h2>
+                <p className="text-xs text-lead-400 mt-0.5">
+                  Após criar, você poderá enviar o link de aprovação via WhatsApp
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="label">
+                WhatsApp do cliente
+                <span className="label-hint">com DDD, sem espaços — ex: 61999998888</span>
+              </label>
+              <input type="text" value={form.telefone_cliente}
+                onChange={e => set('telefone_cliente', e.target.value.replace(/\D/g, ''))}
+                placeholder="61999998888" className="input" maxLength={13} />
             </div>
           </div>
 
@@ -161,7 +192,6 @@ export default function NovaOCDiretaPage() {
             </div>
 
             <div className="space-y-3">
-              {/* Header */}
               <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-semibold text-lead-500 uppercase px-1">
                 <span className="col-span-5">Descrição</span>
                 <span className="col-span-2">Unidade</span>
@@ -174,13 +204,20 @@ export default function NovaOCDiretaPage() {
                 const subtotal = (parseFloat(item.quantidade) || 0) * (parseFloat(item.valor_unitario) || 0)
                 return (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                    <input type="text" value={item.descricao} onChange={e => setItem(i, 'descricao', e.target.value)} placeholder="Material / serviço" className="input col-span-12 sm:col-span-5 text-sm" />
-                    <input type="text" value={item.unidade} onChange={e => setItem(i, 'unidade', e.target.value)} placeholder="un" className="input col-span-3 sm:col-span-2 text-sm text-center" />
-                    <input type="number" min="0" step="0.01" value={item.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} className="input col-span-3 sm:col-span-2 text-sm text-right" />
-                    <input type="number" min="0" step="0.01" value={item.valor_unitario} onChange={e => setItem(i, 'valor_unitario', e.target.value)} placeholder="0,00" className="input col-span-5 sm:col-span-2 text-sm text-right" />
+                    <input type="text" value={item.descricao} onChange={e => setItem(i, 'descricao', e.target.value)}
+                      placeholder="Material / serviço" className="input col-span-12 sm:col-span-5 text-sm" />
+                    <input type="text" value={item.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}
+                      placeholder="un" className="input col-span-3 sm:col-span-2 text-sm text-center" />
+                    <input type="number" min="0" step="0.01" value={item.quantidade}
+                      onChange={e => setItem(i, 'quantidade', e.target.value)}
+                      className="input col-span-3 sm:col-span-2 text-sm text-right" />
+                    <input type="number" min="0" step="0.01" value={item.valor_unitario}
+                      onChange={e => setItem(i, 'valor_unitario', e.target.value)}
+                      placeholder="0,00" className="input col-span-5 sm:col-span-2 text-sm text-right" />
                     <div className="col-span-1 flex items-center justify-end gap-1">
                       {subtotal > 0 && <span className="text-xs text-lead-500 hidden sm:block">{fmt(subtotal)}</span>}
-                      <button type="button" onClick={() => removeItem(i)} disabled={itens.length === 1} className="p-1.5 text-lead-300 hover:text-red-500 disabled:opacity-30">
+                      <button type="button" onClick={() => removeItem(i)} disabled={itens.length === 1}
+                        className="p-1.5 text-lead-300 hover:text-red-500 disabled:opacity-30">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -189,7 +226,6 @@ export default function NovaOCDiretaPage() {
               })}
             </div>
 
-            {/* Total */}
             <div className="mt-4 pt-4 border-t border-lead-100 flex justify-end">
               <div className="text-right">
                 <p className="text-sm text-lead-500">Total geral</p>
@@ -201,7 +237,9 @@ export default function NovaOCDiretaPage() {
           {/* Observações */}
           <div className="card p-6">
             <h2 className="font-semibold text-lead-900 mb-3">Observações</h2>
-            <textarea rows={3} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} placeholder="Instruções de entrega, condições especiais..." className="input resize-none" />
+            <textarea rows={3} value={form.observacoes} onChange={e => set('observacoes', e.target.value)}
+              placeholder="Instruções de entrega, condições especiais..."
+              className="textarea" />
           </div>
 
           <div className="flex gap-3 justify-end">
