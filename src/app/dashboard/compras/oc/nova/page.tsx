@@ -91,7 +91,7 @@ export default function NovaOCDiretaPage() {
       desconto: 0,
     }).select().single()
 
-    if (error) { setErro('Erro ao criar O.C. Tente novamente.'); setSalvando(false); return }
+    if (error) { setErro(`Erro: ${error.message}`); setSalvando(false); return }
     router.push(`/dashboard/compras/oc/${oc.id}`)
     router.refresh()
   }
