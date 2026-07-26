@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       { data: solicitacoes },
     ] = await Promise.all([
       supabase.from('obras')
-        .select('nome, codigo, status, progresso, orcamento_total, data_inicio, data_prevista, cliente, cidade')
+        .select('nome, codigo, status, percentual_conclusao, orcamento_total, data_inicio, data_prevista, cliente, cidade')
         .order('nome').limit(20),
 
       supabase.from('compras')
@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
         .order('data_inicio').limit(40),
 
       supabase.from('financeiro')
-        .select('tipo, descricao, valor, data, status, obras(nome, codigo)')
-        .order('data', { ascending: false }).limit(20),
+        .select('tipo, descricao, valor, data_referencia, status, obras(nome, codigo)')
+        .order('data_referencia', { ascending: false }).limit(20),
 
       supabase.from('solicitacoes_cliente')
         .select('titulo, categoria, status, criado_em, obras(nome, codigo)')
