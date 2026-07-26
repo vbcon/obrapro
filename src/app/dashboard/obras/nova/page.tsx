@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,16 @@ const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG
 
 export default function NovaObraPage() {
   const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('perfis').select('papel').eq('id', user.id).single().then(({ data }) => {
+        if (data?.papel && data.papel !== 'admin') router.replace('/dashboard')
+      })
+    })
+  }, [])
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
 

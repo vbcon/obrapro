@@ -9,7 +9,7 @@ import {
   ArrowLeft, Building2, MapPin, Calendar, Package, DollarSign,
   CheckCircle2, Copy, Check, Printer, Plus, FileText, Receipt,
   AlertCircle, ExternalLink, Banknote, Trash2, X, Upload, Sparkles, Loader2,
-  Send, Clock, MessageCircle, Paperclip, File,
+  Send, Clock, MessageCircle, Paperclip, File, ThumbsUp, ThumbsDown, XCircle,
 } from 'lucide-react'
 
 function fmt(v: number) {
@@ -45,11 +45,14 @@ export default function OcDetailPage() {
   const [cotacao, setCotacao] = useState<any>(null)
   const [docs, setDocs]       = useState<any[]>([])
   const [anexos, setAnexos]   = useState<any[]>([])
+  const [papel, setPapel]     = useState<string>('admin')
   const [carregando, setCarregando]   = useState(true)
   const [copiado, setCopiado]         = useState(false)
   const [copiadoLink, setCopiadoLink] = useState(false)
   const [uploadingAnexo, setUploadingAnexo] = useState(false)
   const [erroAnexo, setErroAnexo]           = useState('')
+  const [aprovandoOC, setAprovandoOC]       = useState(false)
+  const [erroAprovacao, setErroAprovacao]   = useState('')
   const anexoRef = useRef<HTMLInputElement>(null)
 
   // form novo doc
@@ -63,6 +66,13 @@ export default function OcDetailPage() {
 
   useEffect(() => {
     async function load() {
+      // Buscar papel do usuário atual
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: perf } = await supabase.from('perfis').select('papel').eq('id', user.id).single()
+        if (perf?.papel) setPapel(perf.papel)
+      }
+
       // Busca OC sem JOIN de solicitacoes_compra (OCs diretas não têm solicitacao_id)
       const { data, error } = await supabase.from('compras')
         .select('*, obras(nome, codigo, endereco, cidade, estado, cliente)')
@@ -108,6 +118,27 @@ export default function OcDetailPage() {
     await navigator.clipboard.writeText(link)
     setCopiadoLink(true)
     setTimeout(() => setCopiadoLink(false), 2500)
+  }
+
+  async function handleAprovarDashboard(aprovado: boolean) {
+    setErroAprovacao('')
+    setAprovandoOC(true)
+    const { data, error } = await supabase.rpc('aprovar_oc_cliente_dashboard', {
+      p_compra_id: id,
+      p_aprovado:  aprovado,
+    })
+    if (error || !data?.ok) {
+      setErroAprovacao(data?.erro || error?.message || 'Erro ao processar. Tente novamente.')
+      setAprovandoOC(false)
+      return
+    }
+    setOc((prev: any) => ({
+      ...prev,
+      status: aprovado ? 'aprovado' : 'cancelado',
+      aprovado_cliente_nome: prev?.aprovado_cliente_nome || 'Você',
+      aprovado_cliente_em: new Date().toISOString(),
+    }))
+    setAprovandoOC(false)
   }
 
   async function uploadAnexo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -430,6 +461,73 @@ export default function OcDetailPage() {
           </div>
         )}
 
+        {/* ── APROVAÇÃO DO CLIENTE (versão dashboard) ──────────────── */}
+        {papel === 'cliente' && (
+          <div className="card overflow-hidden">
+            <div className="px-6 py-4 border-b border-lead-100">
+              <p className="section-title">Aprovação</p>
+              <p className="text-xs text-lead-400 mt-0.5">Revise os itens e valor acima e confirme sua decisão</p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {oc.status === 'aprovado' ? (
+                <div className="rounded-xl bg-green-50 border border-green-200 p-4 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <p className="font-semibold text-green-800">
+                      Aprovado por {oc.aprovado_cliente_nome || 'você'}
+                    </p>
+                  </div>
+                  {oc.aprovado_cliente_em && (
+                    <p className="text-sm text-green-600 ml-7">
+                      {new Date(oc.aprovado_cliente_em).toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: 'long', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  )}
+                </div>
+              ) : oc.status === 'cancelado' ? (
+                <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
+                  <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                  <p className="font-semibold text-red-800">Esta O.C. foi reprovada.</p>
+                </div>
+              ) : (
+                <>
+                  {erroAprovacao && (
+                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                      <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                      <p className="text-red-700 text-sm">{erroAprovacao}</p>
+                    </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => handleAprovarDashboard(true)}
+                      disabled={aprovandoOC}
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-white text-base transition-all disabled:opacity-60"
+                      style={{ background: aprovandoOC ? '#6b7280' : 'linear-gradient(135deg,#22c55e,#16a34a)' }}
+                    >
+                      {aprovandoOC
+                        ? <><Loader2 className="w-5 h-5 animate-spin" />Processando...</>
+                        : <><ThumbsUp className="w-5 h-5" />Aprovar O.C. — {fmt(oc.valor_total || 0)}</>
+                      }
+                    </button>
+                    <button
+                      onClick={() => handleAprovarDashboard(false)}
+                      disabled={aprovandoOC}
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-base border-2 border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition-all disabled:opacity-60"
+                    >
+                      <ThumbsDown className="w-5 h-5" />Reprovar
+                    </button>
+                  </div>
+                  <p className="text-xs text-center text-lead-400">
+                    Sua decisão será registrada com nome e data/hora.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── ANEXOS ────────────────────────────────────────────────── */}
         <div className="card overflow-hidden">
           <div className="section-header">
@@ -437,6 +535,7 @@ export default function OcDetailPage() {
               <p className="section-title">Anexos</p>
               <p className="text-xs text-lead-400 mt-0.5">Cotações, propostas e outros documentos do fornecedor</p>
             </div>
+            {papel !== 'cliente' && (
             <label className={`btn-primary btn-sm cursor-pointer ${uploadingAnexo ? 'opacity-60 pointer-events-none' : ''}`}>
               {uploadingAnexo
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Enviando...</>
@@ -451,6 +550,7 @@ export default function OcDetailPage() {
                 disabled={uploadingAnexo}
               />
             </label>
+            )}
           </div>
 
           {erroAnexo && (
@@ -489,6 +589,7 @@ export default function OcDetailPage() {
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
+                    {papel !== 'cliente' && (
                     <button
                       onClick={() => deletarAnexo(a)}
                       className="p-1.5 rounded-md text-lead-300 hover:text-red-500 hover:bg-red-50 transition-all"
@@ -496,6 +597,7 @@ export default function OcDetailPage() {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -503,8 +605,8 @@ export default function OcDetailPage() {
           )}
         </div>
 
-        {/* ── APROVAÇÃO DO CLIENTE ──────────────────────────────────── */}
-        <div className="card overflow-hidden">
+        {/* ── APROVAÇÃO DO CLIENTE (admin) ─────────────────────────── */}
+        {papel !== 'cliente' && <div className="card overflow-hidden">
           <div className="section-header">
             <div>
               <p className="section-title">Aprovação do Cliente</p>
@@ -583,10 +685,10 @@ export default function OcDetailPage() {
               </p>
             )}
           </div>
-        </div>
+        </div>}
 
-        {/* ── DOCUMENTOS FINANCEIROS ──────────────────────────────── */}
-        <div className="card overflow-hidden">
+        {/* ── DOCUMENTOS FINANCEIROS (admin) ───────────────────────── */}
+        {papel !== 'cliente' && <div className="card overflow-hidden">
           <div className="section-header">
             <div>
               <p className="section-title">Documentos Financeiros</p>
@@ -804,7 +906,7 @@ export default function OcDetailPage() {
               })}
             </div>
           )}
-        </div>
+        </div>}
 
         {sol && (
           <Link href={`/dashboard/compras/${oc.solicitacao_id}`}

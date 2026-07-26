@@ -45,8 +45,14 @@ export default function NovaOCDiretaPage() {
   ])
 
   useEffect(() => {
-    createClient().from('obras').select('id, nome, codigo').order('nome')
-      .then(({ data }) => setObras(data || []))
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('perfis').select('papel').eq('id', user.id).single().then(({ data }) => {
+        if (data?.papel && data.papel !== 'admin') { router.replace('/dashboard'); return }
+        supabase.from('obras').select('id, nome, codigo').order('nome').then(({ data: obras }) => setObras(obras || []))
+      })
+    })
   }, [])
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }

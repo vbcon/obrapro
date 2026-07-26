@@ -44,6 +44,12 @@ export default async function DashboardPage() {
   const hoje = new Date().toISOString().split('T')[0]
   const em14 = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: perfil } = user
+    ? await supabase.from('perfis').select('papel').eq('id', user.id).single()
+    : { data: null }
+  const isAdmin = perfil?.papel === 'admin'
+
   const [
     { data: obras },
     { count: aprovacoesCount },
@@ -100,10 +106,12 @@ export default async function DashboardPage() {
             {dataFmt} · {ativas.length} obra{ativas.length !== 1 ? 's' : ''} ativa{ativas.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link href="/dashboard/obras/nova" className="btn-primary hidden sm:inline-flex shrink-0">
-          <Plus className="w-4 h-4" />
-          Nova obra
-        </Link>
+        {isAdmin && (
+          <Link href="/dashboard/obras/nova" className="btn-primary hidden sm:inline-flex shrink-0">
+            <Plus className="w-4 h-4" />
+            Nova obra
+          </Link>
+        )}
       </div>
 
       {/* ── KPI strip ──────────────────────────────────── */}
@@ -370,13 +378,13 @@ export default async function DashboardPage() {
         <p className="text-[10px] font-semibold text-lead-400 uppercase tracking-wider mb-3">Ações rápidas</p>
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Nova obra',        href: '/dashboard/obras/nova',       icon: HardHat },
-            { label: 'Nova solicitação', href: '/dashboard/compras/nova',     icon: ShoppingCart },
-            { label: 'Nova O.C. direta', href: '/dashboard/compras/oc/nova',  icon: Package },
-            { label: 'Novo evento',      href: '/dashboard/cronograma/novo',  icon: CalendarDays },
-            { label: 'Novo status',      href: '/dashboard/diario/nova',      icon: Camera },
-            { label: 'Novo lançamento',  href: '/dashboard/financeiro/novo',  icon: TrendingUp },
-          ].map(({ label, href, icon: Icon }) => (
+            isAdmin && { label: 'Nova obra',        href: '/dashboard/obras/nova',       icon: HardHat },
+            isAdmin && { label: 'Nova solicitação', href: '/dashboard/compras/nova',     icon: ShoppingCart },
+            isAdmin && { label: 'Nova O.C. direta', href: '/dashboard/compras/oc/nova',  icon: Package },
+                        { label: 'Novo evento',      href: '/dashboard/cronograma/novo',  icon: CalendarDays },
+                        { label: 'Novo status',      href: '/dashboard/diario/nova',      icon: Camera },
+            isAdmin && { label: 'Novo lançamento',  href: '/dashboard/financeiro/novo',  icon: TrendingUp },
+          ].filter(Boolean).map(({ label, href, icon: Icon }: any) => (
             <Link key={href} href={href}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-lead-200 bg-white
                          text-xs font-medium text-lead-600
