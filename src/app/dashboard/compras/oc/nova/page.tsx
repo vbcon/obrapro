@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, Save, AlertCircle, Plus, Trash2, Paperclip, X, File } from 'lucide-react'
+import { ArrowLeft, Save, AlertCircle, Plus, Trash2, Paperclip, X, File, Download } from 'lucide-react'
 
 interface Item { descricao: string; unidade: string; quantidade: string; valor_unitario: string }
 
@@ -44,6 +44,9 @@ export default function NovaOCDiretaPage() {
     { descricao: '', unidade: 'un', quantidade: '1', valor_unitario: '' }
   ])
 
+  const [solicitacoes, setSolicitacoes] = useState<any[]>([])
+  const [solicitacaoSel, setSolicitacaoSel] = useState('')
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -54,6 +57,35 @@ export default function NovaOCDiretaPage() {
       })
     })
   }, [])
+
+  // Carrega solicitações da obra selecionada (com itens para importar)
+  useEffect(() => {
+    setSolicitacaoSel('')
+    if (!form.obra_id) { setSolicitacoes([]); return }
+    const supabase = createClient()
+    supabase.from('solicitacoes_compra')
+      .select('id, titulo, itens, status, criado_em')
+      .eq('obra_id', form.obra_id)
+      .neq('status', 'cancelada')
+      .order('criado_em', { ascending: false })
+      .then(({ data }) => setSolicitacoes(data || []))
+  }, [form.obra_id])
+
+  function importarSolicitacao() {
+    const sol = solicitacoes.find(s => s.id === solicitacaoSel)
+    if (!sol || !Array.isArray(sol.itens) || sol.itens.length === 0) return
+    const novos: Item[] = sol.itens.map((it: any) => ({
+      descricao:      it.descricao || '',
+      unidade:        it.unidade || 'un',
+      quantidade:     String(it.quantidade ?? '1'),
+      valor_unitario: '',
+    }))
+    // Substitui a lista se só tiver a linha vazia inicial; senão, adiciona ao final
+    setItens(prev => {
+      const vazia = prev.length === 1 && !prev[0].descricao && !prev[0].valor_unitario
+      return vazia ? novos : [...prev, ...novos]
+    })
+  }
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
 
@@ -268,6 +300,30 @@ export default function NovaOCDiretaPage() {
                 <Plus className="w-3.5 h-3.5" />Adicionar item
               </button>
             </div>
+
+            {/* Importar de solicitação */}
+            {form.obra_id && solicitacoes.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 mb-4 p-3 rounded-lg bg-brand-50/60 border border-brand-100">
+                <div className="flex-1">
+                  <label className="label text-xs flex items-center gap-1.5">
+                    <Download className="w-3.5 h-3.5 text-brand-500" />
+                    Importar itens de uma solicitação
+                  </label>
+                  <select value={solicitacaoSel} onChange={e => setSolicitacaoSel(e.target.value)} className="select text-sm">
+                    <option value="">Selecione uma solicitação...</option>
+                    {solicitacoes.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.titulo} ({Array.isArray(s.itens) ? s.itens.length : 0} {Array.isArray(s.itens) && s.itens.length === 1 ? 'item' : 'itens'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button type="button" onClick={importarSolicitacao} disabled={!solicitacaoSel}
+                  className="btn-secondary btn-sm disabled:opacity-40 shrink-0">
+                  <Download className="w-3.5 h-3.5" />Importar itens
+                </button>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-semibold text-lead-500 uppercase px-1">

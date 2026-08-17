@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 import {
   CalendarDays, Plus, CheckCircle2, Circle, Trash2,
-  ChevronUp, ChevronDown, GanttChartSquare, AlertCircle,
+  ChevronUp, ChevronDown, GanttChartSquare, AlertCircle, Pencil,
 } from 'lucide-react'
 
 const CATEGORIA_CORES: Record<string, string> = {
@@ -276,6 +276,13 @@ export default function CronogramaPage() {
                                   : <Circle className="w-4 h-4" />
                                 }
                               </button>
+                              <Link
+                                href={`/dashboard/cronograma/${e.id}/editar`}
+                                title="Editar"
+                                className="p-1.5 rounded-md text-lead-400 hover:text-brand-600 hover:bg-brand-50 transition-all"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Link>
                               <button
                                 onClick={() => deletar(e.id)}
                                 title="Excluir"

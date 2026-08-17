@@ -246,9 +246,10 @@ export default function NovaCronogramaPage() {
                         {/* Início */}
                         <td className="px-3 py-2">
                           {idx === 0 ? (
-                            <span className="text-xs font-medium text-lead-700 px-1">
-                              {dt ? fmtData(dt.inicio) : '—'}
-                            </span>
+                            <input type="date" required
+                              value={dataInicio}
+                              onChange={e => setDataInicio(e.target.value)}
+                              className="input input-sm w-full" />
                           ) : (
                             <div className="space-y-1.5">
                               <div className="flex rounded-lg border border-lead-200 overflow-hidden text-[11px] font-medium">

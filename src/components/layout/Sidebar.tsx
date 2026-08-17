@@ -9,12 +9,13 @@ import type { Papel } from '@/lib/types/roles'
 import {
   HardHat, CalendarDays, ShoppingCart,
   LogOut, LayoutDashboard,
-  Settings, BookOpen, DollarSign, Users, Inbox, X, Sparkles,
+  Settings, BookOpen, DollarSign, Users, Inbox, X, Sparkles, ListTodo,
 } from 'lucide-react'
 
 const NAV_PRINCIPAL = [
   { label: 'Dashboard',      href: '/dashboard',                icon: LayoutDashboard, exact: true, papeis: ['admin','cliente','arquiteto'] },
   { label: 'Obras',          href: '/dashboard/obras',          icon: HardHat,         papeis: ['admin','cliente'] },
+  { label: 'Tarefas',        href: '/dashboard/tarefas',        icon: ListTodo,        papeis: ['admin','cliente','arquiteto'] },
   { label: 'Compras',        href: '/dashboard/compras',        icon: ShoppingCart,    papeis: ['admin','cliente'] },
   { label: 'Financeiro',     href: '/dashboard/financeiro',     icon: DollarSign,      papeis: ['admin','cliente'] },
   { label: 'Cronograma',     href: '/dashboard/cronograma',     icon: CalendarDays,    papeis: ['admin','cliente','arquiteto'] },
