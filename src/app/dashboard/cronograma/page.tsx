@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 import {
   CalendarDays, Plus, CheckCircle2, Circle, Trash2,
-  ChevronUp, ChevronDown, GanttChartSquare, AlertCircle, Pencil,
+  ChevronUp, ChevronDown, GanttChartSquare, AlertCircle, Pencil, ListChecks,
 } from 'lucide-react'
 
 const CATEGORIA_CORES: Record<string, string> = {
@@ -138,6 +138,12 @@ export default function CronogramaPage() {
             {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
           </select>
           <div className="flex-1" />
+          {obraFiltro && (
+            <Link href={`/dashboard/cronograma/editar?obra=${obraFiltro}`} className="btn-secondary">
+              <ListChecks className="w-4 h-4" />
+              Editar cronograma
+            </Link>
+          )}
           <Link href="/dashboard/cronograma/novo" className="btn-primary">
             <Plus className="w-4 h-4" />
             Nova etapa
@@ -169,6 +175,10 @@ export default function CronogramaPage() {
                   <span className="text-xs font-bold text-lead-500 uppercase tracking-wider">{info.codigo}</span>
                   <span className="text-sm font-semibold text-lead-800">{info.nome}</span>
                   <span className="ml-auto text-xs text-lead-400">{ets.length} etapa{ets.length !== 1 ? 's' : ''}</span>
+                  <Link href={`/dashboard/cronograma/editar?obra=${obraId}`}
+                    className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors">
+                    <ListChecks className="w-3.5 h-3.5" />Editar
+                  </Link>
                 </div>
               )}
 
