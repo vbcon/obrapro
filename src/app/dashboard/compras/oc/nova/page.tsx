@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ArrowLeft, Save, AlertCircle, Plus, Trash2, Paperclip, X, File, Download } from 'lucide-react'
+import { ArrowLeft, Save, AlertCircle, Plus, Trash2, Paperclip, X, File, Sparkles, Loader2, FileText } from 'lucide-react'
 
 interface Item { descricao: string; unidade: string; quantidade: string; valor_unitario: string }
 
@@ -44,8 +44,10 @@ export default function NovaOCDiretaPage() {
     { descricao: '', unidade: 'un', quantidade: '1', valor_unitario: '' }
   ])
 
-  const [solicitacoes, setSolicitacoes] = useState<any[]>([])
-  const [solicitacaoSel, setSolicitacaoSel] = useState('')
+  const [lendoCotacao, setLendoCotacao] = useState(false)
+  const [erroCotacao, setErroCotacao]   = useState('')
+  const [cotacaoInfo, setCotacaoInfo]   = useState('')
+  const cotacaoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -58,33 +60,54 @@ export default function NovaOCDiretaPage() {
     })
   }, [])
 
-  // Carrega solicitações da obra selecionada (com itens para importar)
-  useEffect(() => {
-    setSolicitacaoSel('')
-    if (!form.obra_id) { setSolicitacoes([]); return }
-    const supabase = createClient()
-    supabase.from('solicitacoes_compra')
-      .select('id, titulo, itens, status, criado_em')
-      .eq('obra_id', form.obra_id)
-      .neq('status', 'cancelada')
-      .order('criado_em', { ascending: false })
-      .then(({ data }) => setSolicitacoes(data || []))
-  }, [form.obra_id])
+  async function lerCotacao(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (cotacaoRef.current) cotacaoRef.current.value = ''
+    if (!file) return
 
-  function importarSolicitacao() {
-    const sol = solicitacoes.find(s => s.id === solicitacaoSel)
-    if (!sol || !Array.isArray(sol.itens) || sol.itens.length === 0) return
-    const novos: Item[] = sol.itens.map((it: any) => ({
-      descricao:      it.descricao || '',
-      unidade:        it.unidade || 'un',
-      quantidade:     String(it.quantidade ?? '1'),
-      valor_unitario: '',
-    }))
-    // Substitui a lista se só tiver a linha vazia inicial; senão, adiciona ao final
-    setItens(prev => {
-      const vazia = prev.length === 1 && !prev[0].descricao && !prev[0].valor_unitario
-      return vazia ? novos : [...prev, ...novos]
-    })
+    setErroCotacao('')
+    setCotacaoInfo('')
+    setLendoCotacao(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/ai/extrair-cotacao', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok || data.error) { setErroCotacao(data.error || 'Não foi possível ler a cotação.'); return }
+
+      const itensLidos: Item[] = Array.isArray(data.itens) ? data.itens.map((it: any) => ({
+        descricao:      it.descricao || '',
+        unidade:        it.unidade || 'un',
+        quantidade:     String(it.quantidade ?? '1'),
+        valor_unitario: it.valor_unitario ? String(it.valor_unitario) : '',
+      })) : []
+
+      if (itensLidos.length === 0) {
+        setErroCotacao('Nenhum item foi identificado no documento. Tente um PDF mais legível.')
+        return
+      }
+
+      // Preenche itens (substitui a linha vazia inicial)
+      setItens(prev => {
+        const vazia = prev.length === 1 && !prev[0].descricao && !prev[0].valor_unitario
+        return vazia ? itensLidos : [...prev, ...itensLidos]
+      })
+
+      // Preenche fornecedor / condição se estiverem vazios
+      setForm(p => ({
+        ...p,
+        fornecedor_nome:    p.fornecedor_nome    || data.fornecedor         || '',
+        condicao_pagamento: p.condicao_pagamento || data.condicao_pagamento || '',
+      }))
+
+      // Arquiva o PDF junto da OC
+      setPendingFiles(prev => [...prev, file])
+      setCotacaoInfo(`${itensLidos.length} ${itensLidos.length === 1 ? 'item importado' : 'itens importados'} · "${file.name}" será arquivado junto à O.C.`)
+    } catch {
+      setErroCotacao('Erro ao processar a cotação. Tente novamente.')
+    } finally {
+      setLendoCotacao(false)
+    }
   }
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
@@ -301,29 +324,42 @@ export default function NovaOCDiretaPage() {
               </button>
             </div>
 
-            {/* Importar de solicitação */}
-            {form.obra_id && solicitacoes.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 mb-4 p-3 rounded-lg bg-brand-50/60 border border-brand-100">
-                <div className="flex-1">
-                  <label className="label text-xs flex items-center gap-1.5">
-                    <Download className="w-3.5 h-3.5 text-brand-500" />
-                    Importar itens de uma solicitação
-                  </label>
-                  <select value={solicitacaoSel} onChange={e => setSolicitacaoSel(e.target.value)} className="select text-sm">
-                    <option value="">Selecione uma solicitação...</option>
-                    {solicitacoes.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.titulo} ({Array.isArray(s.itens) ? s.itens.length : 0} {Array.isArray(s.itens) && s.itens.length === 1 ? 'item' : 'itens'})
-                      </option>
-                    ))}
-                  </select>
+            {/* Ler cotação em PDF com IA */}
+            <div className="mb-4 p-4 rounded-xl border-2 border-dashed border-brand-200 bg-brand-50/40">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-brand-100 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-brand-600" />
                 </div>
-                <button type="button" onClick={importarSolicitacao} disabled={!solicitacaoSel}
-                  className="btn-secondary btn-sm disabled:opacity-40 shrink-0">
-                  <Download className="w-3.5 h-3.5" />Importar itens
-                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-lead-900">Ler cotação automaticamente</p>
+                  <p className="text-xs text-lead-500 mt-0.5">
+                    Envie o PDF (ou foto) da cotação do fornecedor. A IA lê os itens, quantidades e valores e preenche a tabela. O arquivo fica arquivado na O.C.
+                  </p>
+
+                  <label className={`btn-primary btn-sm mt-3 cursor-pointer inline-flex ${lendoCotacao ? 'opacity-60 pointer-events-none' : ''}`}>
+                    {lendoCotacao
+                      ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Lendo cotação...</>
+                      : <><FileText className="w-3.5 h-3.5" />Enviar cotação (PDF)</>
+                    }
+                    <input ref={cotacaoRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp"
+                      className="sr-only" onChange={lerCotacao} disabled={lendoCotacao} />
+                  </label>
+
+                  {cotacaoInfo && (
+                    <div className="flex items-start gap-2 mt-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <span>{cotacaoInfo} Confira os valores antes de gerar a O.C.</span>
+                    </div>
+                  )}
+                  {erroCotacao && (
+                    <div className="flex items-start gap-2 mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <span>{erroCotacao}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
 
             <div className="space-y-3">
               <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-semibold text-lead-500 uppercase px-1">
