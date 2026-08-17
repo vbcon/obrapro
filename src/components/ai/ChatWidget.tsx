@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { X, Send, Sparkles, Loader2, RotateCcw } from 'lucide-react'
+import { useChat } from '@/lib/context/ChatContext'
 
 interface Msg {
   role: 'user' | 'assistant'
@@ -17,7 +18,7 @@ const SUGESTOES = [
 ]
 
 export default function ChatWidget() {
-  const [aberto, setAberto]       = useState(false)
+  const { isOpen: aberto, close } = useChat()
   const [msgs, setMsgs]           = useState<Msg[]>([])
   const [input, setInput]         = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -62,21 +63,6 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Botão flutuante */}
-      {!aberto && (
-        <button
-          onClick={() => setAberto(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-white text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{
-            background: 'linear-gradient(135deg, #f97316, #ea580c)',
-            boxShadow: '0 8px 28px rgba(249,115,22,0.40)',
-          }}
-        >
-          <Sparkles className="w-4 h-4" />
-          Perguntar à IA
-        </button>
-      )}
-
       {/* Painel de chat */}
       {aberto && (
         <div
@@ -115,7 +101,7 @@ export default function ChatWidget() {
                 </button>
               )}
               <button
-                onClick={() => setAberto(false)}
+                onClick={close}
                 className="p-1.5 rounded-lg transition-colors"
                 style={{ color: 'rgba(255,255,255,0.35)' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}

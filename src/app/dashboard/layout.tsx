@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import ChatWidget from '@/components/ai/ChatWidget'
 import { UserProvider } from '@/lib/context/UserContext'
 import { SidebarProvider } from '@/lib/context/SidebarContext'
+import { ChatProvider } from '@/lib/context/ChatContext'
 import type { Papel } from '@/lib/types/roles'
 
 export default async function DashboardLayout({
@@ -34,6 +35,7 @@ export default async function DashboardLayout({
   return (
     <UserProvider initialProfile={initialProfile}>
       <SidebarProvider>
+        <ChatProvider>
         <div className="min-h-screen bg-lead-50">
           <Sidebar
             nomeUsuario={perfil?.nome || user.email?.split('@')[0]}
@@ -48,6 +50,7 @@ export default async function DashboardLayout({
           </div>
           <ChatWidget />
         </div>
+        </ChatProvider>
       </SidebarProvider>
     </UserProvider>
   )

@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useSidebar } from '@/lib/context/SidebarContext'
+import { useChat } from '@/lib/context/ChatContext'
 import type { Papel } from '@/lib/types/roles'
 import {
   HardHat, CalendarDays, ShoppingCart,
   LogOut, LayoutDashboard,
-  Settings, BookOpen, DollarSign, Users, Inbox, X,
+  Settings, BookOpen, DollarSign, Users, Inbox, X, Sparkles,
 } from 'lucide-react'
 
 const NAV_PRINCIPAL = [
@@ -42,6 +43,7 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
   const pathname = usePathname()
   const router   = useRouter()
   const { isOpen, close } = useSidebar()
+  const { open: abrirChat } = useChat()
 
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href)
@@ -97,6 +99,8 @@ export default function Sidebar({ nomeUsuario, emailUsuario, papel }: SidebarPro
               <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label}
                 active={isActive(item.href, item.exact)} onClick={close} />
             ))}
+            <NavButton icon={Sparkles} label="Assistente IA"
+              onClick={() => { abrirChat(); close() }} />
           </NavSection>
 
           {navSistema.length > 0 && (
@@ -177,5 +181,21 @@ function NavItem({ href, icon: Icon, label, active, onClick }: {
       <span className="flex-1 leading-none">{label}</span>
       {active && <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-brand-500" />}
     </Link>
+  )
+}
+
+function NavButton({ icon: Icon, label, onClick }: {
+  icon: React.ElementType; label: string; onClick: () => void
+}) {
+  return (
+    <button onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[13.5px] transition-all duration-150 select-none"
+      style={{ fontWeight: 400, color: '#6b7280', background: 'transparent' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#fff7ed'; e.currentTarget.style.color = '#c2410c' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6b7280' }}
+    >
+      <Icon className="shrink-0 w-4 h-4 text-orange-500" />
+      <span className="flex-1 leading-none text-left">{label}</span>
+    </button>
   )
 }
