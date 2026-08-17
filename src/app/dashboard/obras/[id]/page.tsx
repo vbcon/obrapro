@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import {
   ArrowLeft, MapPin, Calendar, DollarSign,
   Camera, ShoppingCart, Pencil, Clock, CheckCircle2,
-  TrendingUp, AlertTriangle,
+  TrendingUp, AlertTriangle, ListTodo,
 } from 'lucide-react'
 import ProjetosSection from '@/components/obras/ProjetosSection'
 
@@ -215,6 +215,10 @@ export default async function ObraDetailPage({ params }: { params: { id: string 
         <div className="card p-5">
           <p className="text-xs font-semibold text-lead-400 uppercase tracking-wider mb-3">Ações rápidas</p>
           <div className="flex flex-wrap gap-2">
+            <Link href={`/dashboard/obras/${obra.id}/tarefas`} className="btn-secondary btn-sm">
+              <ListTodo className="w-3.5 h-3.5" />
+              Tarefas
+            </Link>
             <Link href={`/dashboard/diario/nova?obra=${obra.id}`} className="btn-secondary btn-sm">
               <Camera className="w-3.5 h-3.5" />
               Novo status
