@@ -84,10 +84,9 @@ export default function NovoStatusObraPage() {
       const ext = file.name.split('.').pop()
       const path = `${form.obra_id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
       const { error: upErr } = await supabase.storage.from('status-obra').upload(path, file)
-      if (!upErr) {
-        const { data } = supabase.storage.from('status-obra').getPublicUrl(path)
-        urlsFotos.push(data.publicUrl)
-      }
+      if (upErr) { setErro('Erro ao enviar foto: ' + upErr.message); setSalvando(false); return }
+      const { data } = supabase.storage.from('status-obra').getPublicUrl(path)
+      urlsFotos.push(data.publicUrl)
     }
 
     const { error } = await supabase.from('diario_obra').insert({
