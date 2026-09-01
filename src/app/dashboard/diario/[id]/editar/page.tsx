@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 import { ArrowLeft, Save, AlertCircle, Plus, Trash2, Camera, X, Loader2 } from 'lucide-react'
+import { comprimirImagem } from '@/lib/utils/comprimirImagem'
 
 interface EfetivoItem { funcao: string; quantidade: string }
 
@@ -95,9 +96,10 @@ export default function EditarStatusObraPage() {
     setSalvando(true)
     const supabase = createClient()
 
-    // Upload novas fotos
+    // Upload novas fotos (comprimidas antes de enviar)
     const urlsNovas: string[] = []
-    for (const file of novasFotos) {
+    for (const original of novasFotos) {
+      const file = await comprimirImagem(original)
       const ext = file.name.split('.').pop()
       const path = `${obraId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
       const { error: upErr } = await supabase.storage.from('status-obra').upload(path, file)
