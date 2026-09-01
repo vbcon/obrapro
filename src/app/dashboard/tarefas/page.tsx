@@ -33,6 +33,7 @@ export default function TarefasModuloPage() {
   const [nova, setNova] = useState({
     obra_id: '', titulo: '', responsavel: '', prioridade: 'normal', data_prevista: '',
   })
+  const [erro, setErro] = useState('')
 
   async function carregar() {
     const supabase = createClient()
@@ -66,11 +67,12 @@ export default function TarefasModuloPage() {
 
   async function salvarNova(e: React.FormEvent) {
     e.preventDefault()
-    if (!nova.obra_id) { return }
-    if (!nova.titulo.trim()) return
+    setErro('')
+    if (!nova.obra_id) { setErro('Selecione a obra.'); return }
+    if (!nova.titulo.trim()) { setErro('Informe o título da tarefa.'); return }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase.from('tarefas').insert({
+    const { data, error } = await supabase.from('tarefas').insert({
       obra_id:       nova.obra_id,
       titulo:        nova.titulo.trim(),
       responsavel:   nova.responsavel || null,
@@ -78,6 +80,7 @@ export default function TarefasModuloPage() {
       data_prevista: nova.data_prevista || null,
       criado_por:    user?.id,
     }).select('*, obras(id, nome, codigo)').single()
+    if (error) { setErro('Erro ao salvar: ' + error.message); return }
     if (data) {
       setTarefas(prev => [data, ...prev])
       setNova(p => ({ ...p, titulo: '', responsavel: '', data_prevista: '' }))
@@ -143,6 +146,12 @@ export default function TarefasModuloPage() {
         {/* Form nova tarefa */}
         {adicionando && (
           <div className="card p-5 border-2 border-brand-200 animate-fade-up">
+            {erro && (
+              <div className="flex items-start gap-2 mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{erro}</span>
+              </div>
+            )}
             <form onSubmit={salvarNova} className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <select required value={nova.obra_id}
