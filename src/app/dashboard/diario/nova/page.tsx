@@ -107,7 +107,7 @@ export default function NovoStatusObraPage() {
       criado_por: user?.id,
     })
 
-    if (error) { setErro('Erro ao salvar. Tente novamente.'); setSalvando(false); return }
+    if (error) { setErro('Erro ao salvar: ' + error.message); setSalvando(false); return }
     router.push('/dashboard/diario')
     router.refresh()
   }
