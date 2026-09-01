@@ -52,7 +52,7 @@ export default function ProjetosSection({ obraId, arquivosIniciais }: Props) {
       const path = `obras/${obraId}/${Date.now()}-${slug}`
 
       const { error: upErr } = await supabase.storage.from('projetos').upload(path, file)
-      if (upErr) { setErro(`Erro ao enviar "${file.name}"`); continue }
+      if (upErr) { setErro(`Erro ao enviar "${file.name}": ${upErr.message}`); continue }
 
       const { data: dbData, error: dbErr } = await supabase.from('obra_arquivos').insert({
         obra_id: obraId,
@@ -63,7 +63,8 @@ export default function ProjetosSection({ obraId, arquivosIniciais }: Props) {
         criado_por: user?.id,
       }).select().single()
 
-      if (!dbErr && dbData) {
+      if (dbErr) { setErro(`Arquivo enviado, mas falhou ao registrar "${file.name}": ${dbErr.message}`); continue }
+      if (dbData) {
         setArquivos(prev => [dbData, ...prev])
       }
     }

@@ -3,6 +3,7 @@ import Header from '@/components/layout/Header'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Sun, Cloud, CloudRain, CloudSun, Users, MessageSquare, AlertTriangle, Megaphone, Camera } from 'lucide-react'
+import DiarioActions from '@/components/diario/DiarioActions'
 
 const climaConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   ensolarado:           { label: 'Ensolarado', icon: Sun,      color: 'text-yellow-500' },
@@ -32,9 +33,12 @@ export default async function StatusObraDetailPage({ params }: { params: { id: s
       <Header titulo="Status da Obra" subtitulo={`${rdo.obras?.codigo} — ${rdo.obras?.nome}`} />
 
       <div className="p-6 max-w-3xl space-y-5">
-        <Link href="/dashboard/diario" className="inline-flex items-center gap-2 text-sm text-lead-500 hover:text-lead-700 transition-colors">
-          <ArrowLeft className="w-4 h-4" />Voltar
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/dashboard/diario" className="inline-flex items-center gap-2 text-sm text-lead-500 hover:text-lead-700 transition-colors">
+            <ArrowLeft className="w-4 h-4" />Voltar
+          </Link>
+          <DiarioActions id={rdo.id} />
+        </div>
 
         {/* Cabeçalho */}
         <div className="card p-5">

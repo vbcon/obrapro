@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
 import Link from 'next/link'
 import { Camera, Plus, Sun, Cloud, CloudRain, CloudSun, Users, MessageSquare } from 'lucide-react'
+import DiarioFiltroObra from '@/components/diario/DiarioFiltroObra'
 
 const climaConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   ensolarado:           { label: 'Ensolarado', icon: Sun,      color: 'text-yellow-500' },
@@ -10,22 +11,32 @@ const climaConfig: Record<string, { label: string; icon: React.ElementType; colo
   parcialmente_nublado: { label: 'Parcial',    icon: CloudSun, color: 'text-yellow-400' },
 }
 
-export default async function StatusObraPage() {
+export default async function StatusObraPage({
+  searchParams,
+}: {
+  searchParams: { obra?: string }
+}) {
   const supabase = await createClient()
-  const { data: registros } = await supabase
-    .from('diario_obra')
-    .select('*, obras(nome, codigo)')
-    .order('data', { ascending: false })
-    .limit(50)
+  const obraFiltro = searchParams.obra || ''
 
-  const lista = registros || []
+  const [{ data: obras }, registrosRes] = await Promise.all([
+    supabase.from('obras').select('id, nome, codigo').order('nome'),
+    (() => {
+      let q = supabase.from('diario_obra').select('*, obras(nome, codigo)').order('data', { ascending: false }).limit(50)
+      if (obraFiltro) q = q.eq('obra_id', obraFiltro)
+      return q
+    })(),
+  ])
+
+  const lista = registrosRes.data || []
 
   return (
     <>
       <Header titulo="Status da Obra" subtitulo="Registros diários de progresso e fotos" />
 
       <div className="p-6 space-y-5">
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <DiarioFiltroObra obras={obras || []} atual={obraFiltro} />
           <Link href="/dashboard/diario/nova" className="btn-primary">
             <Plus className="w-4 h-4" />
             Novo registro
@@ -37,7 +48,9 @@ export default async function StatusObraPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4">
               <Camera className="w-8 h-8 text-brand-500" />
             </div>
-            <h3 className="text-lg font-semibold text-lead-900">Nenhum registro</h3>
+            <h3 className="text-lg font-semibold text-lead-900">
+              {obraFiltro ? 'Nenhum registro para esta obra' : 'Nenhum registro'}
+            </h3>
             <p className="text-lead-500 text-sm mt-1 max-w-xs">Comece registrando o status de uma obra com fotos.</p>
             <Link href="/dashboard/diario/nova" className="btn-primary mt-6">
               <Plus className="w-4 h-4" />Novo registro
