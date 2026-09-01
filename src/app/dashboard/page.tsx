@@ -23,7 +23,7 @@ function getHealth(obra: any): ObraHealth {
 
 function getDias(data?: string | null): number | null {
   if (!data) return null
-  return Math.ceil((new Date(data + 'T00:00:00').getTime() - Date.now()) / 86400000)
+  return Math.ceil((new Date(String(data).slice(0, 10) + 'T00:00:00').getTime() - Date.now()) / 86400000)
 }
 
 const fmt = (v: number) =>
@@ -260,7 +260,7 @@ export default async function DashboardPage() {
               {eventos.map((ev: any) => {
                 const cfg  = tipoEvento[ev.tipo] || tipoEvento.outro
                 const Icon = cfg.icon
-                const data = new Date(ev.data_inicio + 'T00:00:00')
+                const data = new Date(String(ev.data_inicio).slice(0, 10) + 'T00:00:00')
                 const dias = getDias(ev.data_inicio)
 
                 return (
