@@ -226,7 +226,7 @@ export default function TarefasModuloPage() {
                         <Link href={`/dashboard/obras/${t.obra_id}`}
                           className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 font-medium">
                           <HardHat className="w-3 h-3" />
-                          {t.obras?.codigo}
+                          {t.obras?.nome}
                         </Link>
                         {t.responsavel && <span className="text-xs text-lead-400">{t.responsavel}</span>}
                         {t.data_prevista && (
