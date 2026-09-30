@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 import {
   ArrowLeft, Building2, MapPin, Calendar, Package, DollarSign,
   CheckCircle2, Copy, Check, Printer, Plus, FileText, Receipt,
-  AlertCircle, ExternalLink, Banknote, Trash2, X, Upload, Sparkles, Loader2,
+  AlertCircle, ExternalLink, Banknote, Trash2, X, Upload, Sparkles, Loader2, Pencil,
   Send, Clock, MessageCircle, Paperclip, File, ThumbsUp, ThumbsDown, XCircle,
 } from 'lucide-react'
 
@@ -39,7 +39,9 @@ const docVazio = {
 
 export default function OcDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const supabase = createClient()
+  const [excluindoOC, setExcluindoOC] = useState(false)
 
   const [oc, setOc]           = useState<any>(null)
   const [cotacao, setCotacao] = useState<any>(null)
@@ -106,6 +108,28 @@ export default function OcDetailPage() {
     }
     load()
   }, [id])
+
+  async function excluirOC() {
+    const aviso = oc.status === 'aprovado'
+      ? `A O.C. ${oc.numero_pedido} JÁ FOI APROVADA pelo cliente.\n\nExcluir mesmo assim? Isso apaga também os documentos financeiros e anexos dela. Não pode ser desfeito.`
+      : `Excluir a O.C. ${oc.numero_pedido}?\n\nIsso apaga também os documentos financeiros e anexos dela. Não pode ser desfeito.`
+    if (!confirm(aviso)) return
+
+    setExcluindoOC(true)
+    // Solicitação de origem aponta para a O.C. (sem cascata): desvincula e reabre
+    await supabase.from('solicitacoes_compra')
+      .update({ compra_id: null, status: 'aprovada' })
+      .eq('compra_id', id)
+
+    const { error } = await supabase.from('compras').delete().eq('id', id)
+    if (error) {
+      alert('Erro ao excluir: ' + error.message)
+      setExcluindoOC(false)
+      return
+    }
+    router.push('/dashboard/compras')
+    router.refresh()
+  }
 
   async function copiarNumero() {
     await navigator.clipboard.writeText(oc.numero_pedido)
@@ -294,7 +318,7 @@ export default function OcDetailPage() {
 
   const obra = oc.obras
   const sol  = oc.solicitacoes_compra
-  const itens = cotacao?.itens || oc.itens || sol?.itens || []
+  const itens = (Array.isArray(oc.itens) && oc.itens.length > 0 ? oc.itens : cotacao?.itens) || sol?.itens || []
   const condicaoPagamento = oc.condicao_pagamento || cotacao?.condicao_pagamento
   const totalDocs = docs.reduce((s, d) => s + (Number(d.valor) || 0), 0)
   const totalPago = docs.filter(d => d.status === 'pago').reduce((s, d) => s + (Number(d.valor) || 0), 0)
@@ -326,6 +350,18 @@ export default function OcDetailPage() {
             <button onClick={() => window.print()} className="btn-ghost py-1.5 px-3 text-sm">
               <Printer className="w-3.5 h-3.5" />Imprimir
             </button>
+            {papel !== 'cliente' && (
+              <>
+                <Link href={`/dashboard/compras/oc/${id}/editar`} className="btn-secondary py-1.5 px-3 text-sm">
+                  <Pencil className="w-3.5 h-3.5" />Editar
+                </Link>
+                <button onClick={excluirOC} disabled={excluindoOC}
+                  className="btn-ghost py-1.5 px-3 text-sm text-red-600 hover:bg-red-50">
+                  {excluindoOC ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Excluir
+                </button>
+              </>
+            )}
           </div>
         </div>
 
