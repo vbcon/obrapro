@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
-import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package, Filter, X, DollarSign } from 'lucide-react'
+import { ShoppingCart, Plus, AlertTriangle, Clock, CheckCircle2, XCircle, Package, Filter, X, DollarSign, FileText } from 'lucide-react'
 
 const URGENCIA: Record<string, { label: string; badge: string }> = {
   baixa:   { label: 'Baixa',   badge: 'badge-neutral' },
@@ -176,9 +176,14 @@ export default function ComprasPage() {
         <div className="card animate-fade-up animation-delay-150">
           <div className="section-header">
             <span className="section-title">Ordens de Compra</span>
-            <Link href="/dashboard/compras/oc/nova" className="btn-primary btn-sm">
-              <Plus className="w-3.5 h-3.5" />Nova O.C. direta
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard/compras/relatorio" className="btn-secondary btn-sm">
+                <FileText className="w-3.5 h-3.5" />Relatório por obra
+              </Link>
+              <Link href="/dashboard/compras/oc/nova" className="btn-primary btn-sm">
+                <Plus className="w-3.5 h-3.5" />Nova O.C. direta
+              </Link>
+            </div>
           </div>
 
           {/* Filtros OC */}
