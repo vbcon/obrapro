@@ -72,11 +72,21 @@ export default function RelatorioComprasPage() {
       .filter(ob => porObra.has(ob.id))
       .map(ob => {
         const lista = porObra.get(ob.id)!
-        return { obra: ob, lista, total: lista.reduce((s, o) => s + (Number(o.valor_total) || 0), 0) }
+        const datas = lista.map(o => o.data_pedido).filter(Boolean).sort() as string[]
+        return {
+          obra: ob, lista,
+          total: lista.reduce((s, o) => s + (Number(o.valor_total) || 0), 0),
+          primeira: datas[0], ultima: datas[datas.length - 1],
+        }
       })
   }, [filtradas, obras])
 
   const totalGeral = grupos.reduce((s, g) => s + g.total, 0)
+  const todasDatas = grupos.flatMap(g => [g.primeira, g.ultima]).filter(Boolean).sort() as string[]
+  const primeiraCompra = todasDatas[0]
+  const ultimaCompra = todasDatas[todasDatas.length - 1]
+  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+  const tituloCapa = grupos.length === 1 ? grupos[0].obra.nome : 'Todas as obras'
 
   function exportarCSV() {
     const linhas = [['Obra', 'Código', 'Nº OC', 'Data', 'Fornecedor', 'Tipo', 'Status', 'Valor (R$)']]
@@ -144,14 +154,77 @@ export default function RelatorioComprasPage() {
           </label>
         </div>
 
-        <div className="hidden print:block">
-          <h1 className="text-lg font-bold">Relatório de Ordens de Compra por Obra</h1>
-          <p className="text-xs text-lead-500">
-            Emitido em {new Date().toLocaleDateString('pt-BR')}
-            {dataIni && ` · de ${fmtData(dataIni)}`}{dataFim && ` até ${fmtData(dataFim)}`}
-            {filtroStatus && ` · status: ${STATUS_OC[filtroStatus]?.label}`}
-          </p>
-        </div>
+        {/* Capa — aparece na tela como resumo e ocupa a primeira folha na impressão */}
+        {!carregando && grupos.length > 0 && (
+          <section className="card overflow-hidden print:border-0 print:shadow-none print:rounded-none print:min-h-[250mm] print:flex print:flex-col print:break-after-page">
+            <div className="h-2 bg-brand-500 print:h-3" />
+            <div className="p-8 md:p-10 print:p-0 print:pt-10 flex-1 flex flex-col">
+              <img src="/logo.png" alt="VBCON Engenharia" className="w-28 h-28 print:w-44 print:h-44 object-contain" />
+
+              <div className="mt-8 print:mt-24">
+                <p className="text-xs font-semibold tracking-[0.2em] text-brand-600 uppercase">Relatório de Ordens de Compra</p>
+                <h2 className="mt-3 text-3xl md:text-4xl print:text-5xl font-bold text-lead-900 leading-tight">{tituloCapa}</h2>
+                {grupos.length === 1 && grupos[0].obra.codigo && (
+                  <p className="mt-2 text-sm text-lead-500">Obra {grupos[0].obra.codigo}</p>
+                )}
+              </div>
+
+              <dl className="mt-8 print:mt-16 grid grid-cols-2 gap-x-8 gap-y-5 max-w-xl">
+                <div>
+                  <dt className="text-[11px] uppercase tracking-wider text-lead-400">Início das compras</dt>
+                  <dd className="mt-1 text-base font-semibold text-lead-900">{fmtData(primeiraCompra)}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] uppercase tracking-wider text-lead-400">Última compra</dt>
+                  <dd className="mt-1 text-base font-semibold text-lead-900">{fmtData(ultimaCompra)}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] uppercase tracking-wider text-lead-400">Ordens de compra</dt>
+                  <dd className="mt-1 text-base font-semibold text-lead-900">{filtradas.length}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] uppercase tracking-wider text-lead-400">Valor total</dt>
+                  <dd className="mt-1 text-base font-semibold text-lead-900 tabular-nums">{fmtMoeda(totalGeral)}</dd>
+                </div>
+              </dl>
+
+              {grupos.length > 1 && (
+                <table className="mt-8 w-full max-w-2xl text-xs">
+                  <thead>
+                    <tr className="text-left text-lead-400 border-b border-lead-200">
+                      <th className="py-2 font-medium">Obra</th>
+                      <th className="py-2 font-medium">Início</th>
+                      <th className="py-2 font-medium text-right">OCs</th>
+                      <th className="py-2 font-medium text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-lead-100">
+                    {grupos.map(g => (
+                      <tr key={g.obra.id}>
+                        <td className="py-1.5 text-lead-900">{g.obra.nome}</td>
+                        <td className="py-1.5 text-lead-600">{fmtData(g.primeira)}</td>
+                        <td className="py-1.5 text-right text-lead-600">{g.lista.length}</td>
+                        <td className="py-1.5 text-right tabular-nums font-semibold text-lead-900">{fmtMoeda(g.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <div className="mt-auto pt-10 border-t border-lead-100 print:border-lead-300 flex items-end justify-between text-xs text-lead-500">
+                <div>
+                  <p className="font-semibold text-lead-700">VBCON Engenharia</p>
+                  <p className="mt-0.5">Relatório emitido em {hoje}</p>
+                </div>
+                <div className="text-right">
+                  {filtroStatus && <p>Status: {STATUS_OC[filtroStatus]?.label}</p>}
+                  {(dataIni || dataFim) && <p>Período filtrado: {dataIni ? fmtData(dataIni) : '…'} a {dataFim ? fmtData(dataFim) : '…'}</p>}
+                  {!incluirCanc && !filtroStatus && <p>Exclui ordens canceladas</p>}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {carregando ? (
           <div className="flex items-center justify-center py-16">
@@ -165,8 +238,8 @@ export default function RelatorioComprasPage() {
         ) : (
           <>
             {grupos.map(g => (
-              <div key={g.obra.id} className="card overflow-hidden break-inside-avoid">
-                <div className="flex items-center gap-3 px-5 py-3 bg-lead-50/70 border-b border-lead-100">
+              <div key={g.obra.id} className="card overflow-hidden print:shadow-none print:rounded-none">
+                <div className="flex items-center gap-3 px-5 py-3 bg-lead-50/70 border-b border-lead-100 print:break-after-avoid">
                   <Building2 className="w-4 h-4 text-brand-600 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-lead-900 truncate">{g.obra.codigo} — {g.obra.nome}</p>
@@ -189,7 +262,7 @@ export default function RelatorioComprasPage() {
                       {g.lista.map(o => {
                         const sts = STATUS_OC[o.status] || { label: o.status, badge: 'badge-neutral' }
                         return (
-                          <tr key={o.id}>
+                          <tr key={o.id} className="print:break-inside-avoid">
                             <td className="px-5 py-2 font-mono text-lead-900">
                               <Link href={`/dashboard/compras/oc/${o.id}`} className="hover:underline">
                                 {o.numero_pedido || o.id.slice(0, 8).toUpperCase()}
