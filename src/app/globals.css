@@ -295,3 +295,10 @@
 
   .divider { @apply border-t border-lead-100; }
 }
+
+/* ── PRINT ───────────────────────────────────────────────── */
+@media print {
+  aside, nav { display: none !important; }
+  .md\:pl-64 { padding-left: 0 !important; }
+  body, .bg-lead-50 { background: #fff !important; }
+}
